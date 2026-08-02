@@ -570,7 +570,10 @@ const restIO = new IntersectionObserver((es) => {
 // lay out and rasterise 400 rows before it could paint one. Each list now renders just
 // enough to fill the view and grows as you reach the end, so it opens instantly and
 // each batch fades in as it arrives.
-const BATCH = 24;
+/* The Rows-per-load setting writes window.BATCH_SIZE; read it per batch rather
+   than capturing it once, so changing the setting takes effect on the next scroll
+   instead of needing a reload. */
+const BATCH_DEFAULT = 24;
 const pagers = new WeakMap();
 function paginate(list, rows, makeRow) {
   pagers.get(list)?.disconnect();          // a new search supersedes the previous list
@@ -593,7 +596,7 @@ function paginate(list, rows, makeRow) {
     if (!sentinel.isConnected) return;
     if (n >= rows.length) { io.disconnect(); sentinel.remove(); return; }
     const frag = document.createDocumentFragment();
-    const end = Math.min(n + BATCH, rows.length);
+    const end = Math.min(n + (window.BATCH_SIZE || BATCH_DEFAULT), rows.length);
     for (let i = n; i < end; i++) {
       const node = makeRow(rows[i], i);
       frag.appendChild(node);
@@ -893,7 +896,13 @@ const NONLINEAR = {
     + "the real effect on the stat, not the sum of the item numbers.",
 };
 
-const fmt = (n) => (Math.round(n * 100) / 100).toFixed(2);
+/* Decimal places come from the setting; rounding first keeps 2.675 from landing on
+   2.67 through binary float, the way a bare toFixed would. */
+const fmt = (n) => {
+  const d = window.STAT_DECIMALS || 2;
+  const p = Math.pow(10, d);
+  return (Math.round(n * p) / p).toFixed(d);
+};
 
 function renderStats(state) {
   const box = $("stats");
@@ -1718,7 +1727,10 @@ function renderResults() {
     if (stat && !(item.cache || []).includes(stat)) return false;
     if (pool && !(item.pools || []).some((p) => p.pool === pool)) return false;
     if (!q) return true;
-    return item.name.toLowerCase().includes(q) || String(item.id) === q;
+    if (item.name.toLowerCase().includes(q) || String(item.id) === q) return true;
+    // Opt-in, because matching every description turns a two-letter query into
+    // half the catalogue and the name match is what people actually want.
+    return !!window.SEARCH_TEXT && (item.text || "").toLowerCase().includes(q);
   });
 
   $("browse-count").textContent = `${matches.length} of ${catalogue.length} items`;
@@ -1804,84 +1816,20 @@ window.onCatalogue = (rows) => {
 // Two switches, two keys, no shared state: turning one off must leave the other
 // exactly where it was. Reduced motion decides the DEFAULT for both, but a choice
 // the user has actually made always wins over it.
+/* The four motion switches used to be wired here, from two different mechanisms
+   reading two different localStorage key formats. They are now entries in the
+   SETTINGS list at the end of this file, which owns loading, applying and
+   persisting all of them -- one source of truth instead of three.
+
+   Reduced motion still decides the DEFAULT, and a choice the user actually made
+   still wins over it; that logic moved into settingsBoot's defaults. */
 function fxPrefOn(key) {
   let v = null;
-  try { v = localStorage.getItem(key); } catch (e) { /* private mode */ }
-  if (v === "1") return true;
-  if (v === "0") return false;
+  try { v = localStorage.getItem("set." + key); } catch (e) { /* private mode */ }
+  if (v === "true") return true;
+  if (v === "false") return false;
   return !matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
-function fxWire(id, key, global) {
-  const box = $(id);
-  const on = fxPrefOn(key);
-  window[global] = on;
-  if (!box) return;
-  box.checked = on;
-  box.addEventListener("change", () => {
-    window[global] = box.checked;            // read live by the row effects
-    try { localStorage.setItem(key, box.checked ? "1" : "0"); } catch (e) { /* private mode */ }
-  });
-}
-fxWire("fx-anim", "fxAnim", "FX_ANIM_ON");
-fxWire("fx-eff", "fxEff", "FX_EFF_ON");
-
-(function () {
-  var MODES = [
-    { key: 'fxMin', global: 'FX_MIN_ON', attr: 'data-fx-min', def: false, sw: 'fxMinSw', box: 'fx-min' },
-    { key: 'fxBg',  global: 'FX_BG_ON',  attr: 'data-fx-bg',  def: true,  sw: 'fxBgSw',  box: 'fx-bg'  }
-  ];
-
-  function read(m) {
-    try {
-      var v = localStorage.getItem(m.key);
-      if (v === 'on' || v === '1' || v === 'true') return true;
-      if (v === 'off' || v === '0' || v === 'false') return false;
-    } catch (e) {}
-    return m.def;
-  }
-
-  function write(m, on) {
-    try { localStorage.setItem(m.key, on ? 'on' : 'off'); } catch (e) {}
-  }
-
-  function apply(m, on) {
-    window[m.global] = on;
-    document.documentElement.setAttribute(m.attr, on ? 'on' : 'off');
-    var sw = document.getElementById(m.sw);
-    if (sw) sw.setAttribute('aria-checked', on ? 'true' : 'false');
-    var box = document.getElementById(m.box);
-    if (box) box.checked = on;
-  }
-
-  function set(m, on) { write(m, on); apply(m, on); }
-
-  window.fxSyncModes = function () {
-    for (var i = 0; i < MODES.length; i++) apply(MODES[i], read(MODES[i]));
-  };
-
-  function wire(m) {
-    var sw = document.getElementById(m.sw);
-    if (sw && !sw.dataset.fxWired) {
-      sw.dataset.fxWired = '1';
-      sw.addEventListener('click', function () {
-        set(m, sw.getAttribute('aria-checked') !== 'true');
-      });
-    }
-    var box = document.getElementById(m.box);
-    if (box && !box.dataset.fxWired) {
-      box.dataset.fxWired = '1';
-      box.addEventListener('change', function () { set(m, box.checked); });
-    }
-  }
-
-  function init() {
-    for (var i = 0; i < MODES.length; i++) wire(MODES[i]);
-    window.fxSyncModes();
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-})();
 
 /* ===== Items tab dropdown — shared by site + app ===== */
 (function () {
@@ -2424,3 +2372,334 @@ for (const c of document.querySelectorAll("[data-corner]")) {
     send({ type: "setPanelField", key: "corner", value: c.dataset.corner });
   });
 }
+
+/* ============================================================================
+   SETTINGS
+
+   Declarative on purpose. Every entry below is {id, type, label, desc, def} plus
+   an `apply` that does the actual work, and the page is rendered FROM that list --
+   so adding a setting is one object, not a block of markup plus a wiring call plus
+   a localStorage line that someone forgets.
+
+   The rule the list enforces: nothing here is decorative. Every switch either sets
+   a CSS custom property, flips a data attribute the stylesheet reads, or changes a
+   value the renderers already consult. A setting that looked like it did something
+   and did not would be worse than not offering it.
+   ========================================================================== */
+
+const SET_KEY = "set.";
+const setStore = {};
+
+function setGet(id) { return setStore[id]; }
+
+function setSave(id, v) {
+  setStore[id] = v;
+  try { localStorage.setItem(SET_KEY + id, JSON.stringify(v)); } catch (e) { /* private mode */ }
+}
+
+/* Shorthands for the three ways a setting reaches the page. */
+const root = () => document.documentElement;
+const cssVar = (name) => (v) => root().style.setProperty(name, v);
+const dataAttr = (name) => (v) =>
+  v === true || v === "on" ? root().removeAttribute(name)
+    : root().setAttribute(name, v === false ? "off" : String(v));
+
+const SETTINGS = [
+  {
+    group: "Appearance",
+    blurb: "How the app itself looks. Nothing here touches your game or your save.",
+    items: [
+      { id: "theme", type: "seg", label: "Theme", def: "devil",
+        opts: [["devil", "Devil"], ["angel", "Angel"]],
+        desc: "Both rooms from the game. Devil is the dark one.",
+        apply: (v) => { if (typeof applyTheme === "function") applyTheme(v, { notify: true }); } },
+
+      { id: "density", type: "seg", label: "Row density", def: "comfortable",
+        opts: [["comfortable", "Comfortable"], ["compact", "Compact"]],
+        desc: "Compact tightens every list row so more fits on screen.",
+        apply: (v) => root().setAttribute("data-density", v) },
+
+      { id: "spriteScale", type: "range", label: "Sprite size", def: 1,
+        min: 0.7, max: 1.8, step: 0.05, unit: "x",
+        desc: "Scales the item and enemy art in lists.",
+        apply: cssVar("--spr-scale") },
+
+      { id: "radius", type: "range", label: "Corner rounding", def: 3,
+        min: 0, max: 14, step: 1, unit: "px",
+        desc: "Applies to rows, cards and tiles.",
+        apply: (v) => cssVar("--ui-radius")(v + "px") },
+
+      { id: "pixelArt", type: "switch", label: "Crisp pixel art", def: true,
+        desc: "Nearest-neighbour scaling, so sprites stay sharp instead of blurring. "
+          + "Off uses smooth resampling.",
+        apply: dataAttr("data-pixel") },
+
+      { id: "scanlines", type: "switch", label: "Scanline overlay", def: true,
+        desc: "The faint CRT lines over the whole app.",
+        apply: dataAttr("data-scan") },
+    ],
+  },
+
+  {
+    group: "Lists",
+    blurb: "What each row shows, and how many of them arrive at a time.",
+    items: [
+      { id: "showTags", type: "switch", label: "Tags on rows", def: true,
+        desc: "The kind, <span class='pill'>special</span> and confidence pills next to a name.",
+        apply: dataAttr("data-tags") },
+
+      { id: "showDeltas", type: "switch", label: "Stat changes on rows", def: true,
+        desc: "The monospaced line of what an item actually changes.",
+        apply: dataAttr("data-deltas") },
+
+      { id: "descLines", type: "seg", label: "Description length", def: "2",
+        opts: [["1", "One line"], ["2", "Two"], ["3", "Three"], ["0", "Full"]],
+        desc: "How much of an item's text a row shows before it is cut.",
+        apply: (v) => cssVar("--desc-lines")(v === "0" ? "unset" : v) },
+
+      { id: "batch", type: "seg", label: "Rows per load", def: "24",
+        opts: [["12", "12"], ["24", "24"], ["48", "48"], ["96", "96"]],
+        desc: "Lists grow as you scroll. Bigger batches mean fewer steps and more work per step.",
+        apply: (v) => { window.BATCH_SIZE = parseInt(v, 10) || 24; } },
+
+      { id: "searchText", type: "switch", label: "Search descriptions too", def: false,
+        desc: "Off matches names and ids only, which is faster and rarely wrong. "
+          + "On also looks inside what an item does.",
+        apply: (v) => { window.SEARCH_TEXT = v; if (typeof renderResults === "function" && catalogue.length) renderResults(); } },
+    ],
+  },
+
+  {
+    group: "Motion",
+    blurb: "Two independent switches: the entry animation a row makes, and the effect "
+      + "wash that fades over it. Turning either off leaves the other alone.",
+    items: [
+      { id: "fxAnim", type: "switch", label: "Entry animations", def: fxPrefOn("fxAnim"),
+        desc: "The motion each row makes as it scrolls into view.",
+        apply: (v) => { window.FX_ANIM_ON = v; root().setAttribute("data-fx-anim", v ? "on" : "off"); } },
+
+      { id: "fxEff", type: "switch", label: "Effect overlays", def: fxPrefOn("fxEff"),
+        desc: "The poison, fire and blood wash that fades over a row.",
+        apply: (v) => { window.FX_EFF_ON = v; root().setAttribute("data-fx-eff", v ? "on" : "off"); } },
+
+      { id: "fxMin", type: "switch", label: "Minimalist effects", def: false,
+        desc: "Only items and enemies that really have the effect show one; everything "
+          + "else stays still.",
+        apply: (v) => { window.FX_MIN_ON = v; root().setAttribute("data-fx-min", v ? "on" : "off"); } },
+
+      { id: "fxBg", type: "switch", label: "Animated backgrounds", def: true,
+        desc: "An item's effect drifts behind its detail card. Off keeps the backdrop "
+          + "but freezes it.",
+        apply: (v) => { window.FX_BG_ON = v; root().setAttribute("data-fx-bg", v ? "on" : "off"); } },
+
+      { id: "spriteFrames", type: "switch", label: "Sprites play their idle", def: true,
+        desc: "Enemy art steps through the frames from the game's own animation files, "
+          + "and pills cycle every colour.",
+        apply: dataAttr("data-frames") },
+
+      { id: "motionSpeed", type: "range", label: "Motion speed", def: 1,
+        min: 0.4, max: 2, step: 0.1, unit: "x",
+        desc: "Multiplies every idle and sprite animation. Lower is calmer.",
+        apply: (v) => cssVar("--motion-k")(1 / (v || 1)) },
+    ],
+  },
+
+  {
+    group: "Run view",
+    blurb: "The live readout while you play.",
+    items: [
+      { id: "decimals", type: "seg", label: "Decimal places", def: "2",
+        opts: [["1", "1"], ["2", "2"], ["3", "3"]],
+        desc: "How precisely the stat numbers read.",
+        apply: (v) => { window.STAT_DECIMALS = parseInt(v, 10) || 2;
+          if (typeof lastStateJSON === "object" && lastStateJSON) window.onState(lastStateJSON); } },
+
+      { id: "showBreakdown", type: "switch", label: "Base + change under each stat", def: true,
+        desc: "Shows what your character started with and what the items added.",
+        apply: dataAttr("data-breakdown") },
+
+      { id: "showNotes", type: "switch", label: "Build conflict notes", def: true,
+        desc: "Warnings when something you are carrying overrides something else.",
+        apply: dataAttr("data-notes") },
+    ],
+  },
+
+  {
+    group: "Data",
+    blurb: "Where the item data comes from, and how much disk it keeps.",
+    items: [
+      { id: "storageMode", type: "seg", label: "Storage", def: "compact",
+        opts: [["compact", "Compact"], ["cached", "Cached"]],
+        desc: "Compact throws the 570&nbsp;MB extraction away once it has what it needs. "
+          + "Cached keeps it so a rebuild skips the one-minute extract. Both produce "
+          + "identical data &#8212; it trades disk for rebuild speed, never features.",
+        native: true,
+        apply: (v) => send({ type: "setStorageMode", mode: v }) },
+
+      { id: "rebuild", type: "action", label: "Rebuild the data", action: "Rebuild now",
+        busy: "Rebuilding\u2026",
+        confirm: "Rebuild the item data from your game install? This takes about a minute.",
+        desc: "Re-reads everything from your own copy of the game. The storage choice "
+          + "above takes effect on the next rebuild, so use this after changing it &#8212; "
+          + "and any time the game updates.",
+        native: true,
+        apply: () => send({ type: "rebuildData" }) },
+    ],
+  },
+];
+
+/* Swift answers when the rebuild finishes, so the button can stop saying "Rebuilding". */
+window.onRebuilt = (ok) => {
+  const item = SETTINGS.flatMap((g) => g.items).find((i) => i.id === "rebuild");
+  if (!item || !item.node) return;
+  item.node.disabled = false;
+  item.node.textContent = ok ? "Rebuilt" : "Rebuild failed \u2014 try again";
+  setTimeout(() => { if (item.node) item.node.textContent = item.action; }, 4000);
+};
+
+/* ---- rendering -------------------------------------------------------------
+   Built from the list above rather than written out in index.html, so the markup
+   and the behaviour cannot drift apart. */
+function setControl(item) {
+  const wrap = el("div", "set-control");
+  if (item.type === "switch") {
+    const lab = el("label", "switch");
+    const box = el("input"); box.type = "checkbox"; box.checked = !!setGet(item.id);
+    const track = el("span", "switch-track"); track.appendChild(el("span", "switch-knob"));
+    lab.append(box, track);
+    box.addEventListener("change", () => { setSave(item.id, box.checked); item.apply(box.checked); });
+    wrap.appendChild(lab);
+  } else if (item.type === "seg") {
+    const seg = el("div", "seg");
+    for (const [value, label] of item.opts) {
+      const b = el("button", "seg-b" + (String(setGet(item.id)) === value ? " on" : ""), label);
+      b.type = "button";
+      b.addEventListener("click", () => {
+        setSave(item.id, value);
+        [...seg.children].forEach((c) => c.classList.toggle("on", c === b));
+        item.apply(value);
+      });
+      seg.appendChild(b);
+    }
+    wrap.appendChild(seg);
+  } else if (item.type === "action") {
+    const b = el("button", "ghost", item.action);
+    b.type = "button";
+    b.addEventListener("click", () => {
+      if (item.confirm && !confirm(item.confirm)) return;
+      b.disabled = true;
+      b.textContent = item.busy || "Working\u2026";
+      item.apply();
+    });
+    item.node = b;
+    wrap.appendChild(b);
+  } else if (item.type === "range") {
+    const r = el("input"); r.type = "range";
+    r.min = item.min; r.max = item.max; r.step = item.step; r.value = setGet(item.id);
+    const out = el("output", "", fmtSetting(item, r.value));
+    r.addEventListener("input", () => {
+      const v = parseFloat(r.value);
+      setSave(item.id, v); item.apply(v); out.textContent = fmtSetting(item, v);
+    });
+    wrap.append(r, out);
+  }
+  return wrap;
+}
+
+function fmtSetting(item, v) {
+  if (item.unit === "x") return (+v).toFixed(2) + "×";
+  if (item.unit === "px") return Math.round(v) + "px";
+  return String(v);
+}
+
+function renderSettings() {
+  const host = $("set-body");
+  const nav = $("set-nav");
+  if (!host || !nav) return;
+  host.textContent = ""; nav.textContent = "";
+
+  for (const group of SETTINGS) {
+    const id = "set-" + group.group.toLowerCase().replace(/\s+/g, "-");
+
+    const link = el("button", "set-navi", group.group);
+    link.type = "button";
+    link.addEventListener("click", () => {
+      const t = $(id);
+      if (t) t.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    nav.appendChild(link);
+
+    const sec = el("section", "set-group"); sec.id = id;
+    sec.appendChild(el("h2", "", group.group));
+    if (group.blurb) {
+      const b = el("p", "set-blurb"); b.innerHTML = group.blurb; sec.appendChild(b);
+    }
+    for (const item of group.items) {
+      const row = el("div", "set-row");
+      row.dataset.search = (item.label + " " + item.desc).toLowerCase().replace(/<[^>]+>/g, "");
+      const text = el("div", "set-text");
+      text.appendChild(el("div", "set-label", item.label));
+      const d = el("p", "set-desc"); d.innerHTML = item.desc; text.appendChild(d);
+      row.append(text, setControl(item));
+      sec.appendChild(row);
+    }
+    host.appendChild(sec);
+  }
+}
+
+/* ---- load, apply, filter ---------------------------------------------------- */
+function settingsBoot() {
+  for (const group of SETTINGS) {
+    for (const item of group.items) {
+      let v = item.def;
+      try {
+        const raw = localStorage.getItem(SET_KEY + item.id);
+        if (raw !== null) v = JSON.parse(raw);
+      } catch (e) { /* private mode, or something hand-edited: fall back to the default */ }
+      setStore[item.id] = v;
+      // Native-backed settings are applied by Swift on its own schedule; applying
+      // them here would post a message back for a value that came FROM there.
+      if (!item.native) { try { item.apply(v); } catch (e) { /* a missing hook must not stop the rest */ } }
+    }
+  }
+  renderSettings();
+
+  const search = $("set-search");
+  if (search) {
+    search.addEventListener("input", () => {
+      const q = search.value.trim().toLowerCase();
+      for (const row of document.querySelectorAll(".set-row")) {
+        row.hidden = !!q && !row.dataset.search.includes(q);
+      }
+      for (const sec of document.querySelectorAll(".set-group")) {
+        const any = [...sec.querySelectorAll(".set-row")].some((r) => !r.hidden);
+        sec.hidden = !any;
+      }
+    });
+  }
+
+  const reset = $("set-reset");
+  if (reset) {
+    reset.addEventListener("click", () => {
+      for (const group of SETTINGS) {
+        for (const item of group.items) {
+          setSave(item.id, item.def);
+          if (!item.native) { try { item.apply(item.def); } catch (e) { /* as above */ } }
+        }
+      }
+      renderSettings();
+    });
+  }
+}
+
+/* Swift owns the storage mode, so the page reflects what it reports rather than
+   keeping its own idea of it. */
+window.onStorageMode = (mode) => {
+  setStore.storageMode = mode;
+  const seg = document.querySelector('#set-data .seg');
+  if (!seg) return;
+  [...seg.children].forEach((b, i) =>
+    b.classList.toggle("on", SETTINGS.find(g => g.group === "Data").items[0].opts[i][0] === mode));
+};
+
+settingsBoot();

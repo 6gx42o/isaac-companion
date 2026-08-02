@@ -464,50 +464,26 @@
 </section>
 
   <section class="page" id="settings">
-  <h1>Settings</h1>
-  <p class="muted small">Motion only — nothing here touches your save.</p>
-
-  <h2>Motion</h2>
-
-  <div class="setting">
-    <label class="switch">
-      <input type="checkbox" id="fx-anim">
-      <span class="switch-track"><span class="switch-knob"></span></span>
-      <span class="switch-name">Entry animations</span>
-    </label>
-    <p class="desc">The motion each row makes as it scrolls into view.</p>
+  <div class="set-top">
+    <div>
+      <h1>Settings</h1>
+      <p class="muted small">All of it is stored in this app only &#8212; nothing here
+        touches the game or your save.</p>
+    </div>
+    <input id="set-search" type="search" placeholder="Filter settings&#8230;"
+           autocomplete="off" aria-label="Filter settings">
   </div>
 
-  <div class="setting">
-    <label class="switch">
-      <input type="checkbox" id="fx-eff">
-      <span class="switch-track"><span class="switch-knob"></span></span>
-      <span class="switch-name">Effect overlays</span>
-    </label>
-    <p class="desc">The poison, fire and blood wash that fades over a row.</p>
+  <div class="set-shell">
+    <nav id="set-nav" aria-label="Settings sections"></nav>
+    <div>
+      <div id="set-body"></div>
+      <div class="set-foot">
+        <button class="ghost" id="set-reset">Reset everything to defaults</button>
+      </div>
+    </div>
   </div>
-
-<!-- ============================================================ -->
-
-<div class="setting">
-  <label class="switch">
-    <input type="checkbox" id="fx-min">
-    <span class="switch-track"><span class="switch-knob"></span></span>
-    <span class="switch-name">Minimalist effects</span>
-  </label>
-  <p class="desc">Only items and enemies that really have the effect show it; everything else stays still.</p>
-</div>
-
-<div class="setting">
-  <label class="switch">
-    <input type="checkbox" id="fx-bg" checked>
-    <span class="switch-track"><span class="switch-knob"></span></span>
-    <span class="switch-name">Animated backgrounds</span>
-  </label>
-  <p class="desc">An item's effect drifts behind its detail card. Off keeps the backdrop but freezes it.</p>
-</div>
-
-</section>
+  </section>
 
   <div id="card" hidden>
     <div class="cardpanel">

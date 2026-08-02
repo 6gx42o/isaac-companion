@@ -82,6 +82,15 @@ Each row shows what it really changes and how confident the data is.
 Enemy icons play the idle loop out of their own animation files; pills cycle every
 colour the game deals.
 
+### Settings
+
+<img src="docs/img/settings.png" alt="The settings page: a section rail, a filter box, and rows of label, description and control">
+
+Twenty-one of them, in five groups, with a filter over the top. Theme, row density,
+sprite size, corner rounding, pixel-art scaling, what each row shows, how many rows
+load at a time, four independent motion switches, decimal places, and the storage
+mode. Every one is wired to something real — none of them are decorative.
+
 ### The room advisor
 
 In a Devil, Treasure or Angel room it reads the pedestals off the screen — passively,

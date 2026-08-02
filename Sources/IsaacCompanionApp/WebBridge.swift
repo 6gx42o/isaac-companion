@@ -83,6 +83,8 @@ struct WebView: NSViewRepresentable {
             webView.evaluateJavaScript("window.onStrip('pills', \(model.pillStripJSON()))")
             webView.evaluateJavaScript("window.onCatalogue(\(model.catalogueJSON()))")
             pushPanelSettings()
+            webView.evaluateJavaScript(
+                "window.onStorageMode('\(model.storageMode.rawValue)')")
             push(model.stateJSON(), force: true)
             // The badge sheet decodes to ~78 MB of RGBA and the enemy sheet ~46 MB.
             // Doing that on the first tab click froze WebKit mid-paint, which looked
@@ -152,6 +154,19 @@ struct WebView: NSViewRepresentable {
             case "resetPanel":
                 model.resetPanelSettings()
                 pushPanelSettings()
+            case "setStorageMode":
+                // Only the preference. Applying it means re-extracting ~570 MB, so
+                // that is a separate, explicit action rather than something a
+                // segmented control does the instant you touch it.
+                if let mode = (body["mode"] as? String).flatMap(StorageMode.init(rawValue:)) {
+                    model.storageMode = mode
+                }
+            case "rebuildData":
+                Task { @MainActor in
+                    await model.rebuild()
+                    webView?.evaluateJavaScript(
+                        "window.onRebuilt(\(model.buildWarnings.isEmpty))", completionHandler: nil)
+                }
             case "showPanel":
                 PanelController.shared.show(model: model)
                 pushPanelGeometry()
