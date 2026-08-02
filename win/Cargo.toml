@@ -1,0 +1,18 @@
+[package]
+name = "isaac-companion"
+version = "0.1.0"
+edition = "2021"
+description = "Isaac Companion for Windows - live Afterbirth+ stat readout"
+
+# No dependencies at all. Everything here is std: the HTTP server, the JSON writer
+# and the log tailer are a few dozen lines each, and a zero-crate build is what keeps
+# cross-compiling from macOS to a Windows .exe reliable rather than a gamble on
+# whether every transitive dependency happens to support the target.
+[dependencies]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Isaac Companion</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="tabs">
+    <button class="tab active" data-tab="run">Run</button>
+    
+      <span class="tabwrap" data-menu="items">
+        <button class="tab" data-tab="browse" id="browseTab"
+                aria-haspopup="menu" aria-expanded="false" aria-controls="browseMenu">Items</button>
+        <div class="tabmenu" id="browseMenu" role="menu" aria-labelledby="browseTab">
+          <button class="tabmenu-i" role="menuitem" tabindex="-1" data-kind="" aria-current="true">
+            <span class="tabmenu-ic ic-all" aria-hidden="true"></span>
+            <span class="tabmenu-l">All items</span>
+            <span class="tabmenu-n" data-count aria-hidden="true"></span>
+          </button>
+          <div class="tabmenu-sep" role="separator"></div>
+          <button class="tabmenu-i" role="menuitem" tabindex="-1" data-kind="passive">
+            <span class="tabmenu-ic ic-passive" aria-hidden="true"></span>
+            <span class="tabmenu-l">Passive</span>
+            <span class="tabmenu-n" data-count aria-hidden="true"></span>
+          </button>
+          <button class="tabmenu-i" role="menuitem" tabindex="-1" data-kind="active">
+            <span class="tabmenu-ic ic-active" aria-hidden="true"></span>
+            <span class="tabmenu-l">Active</span>
+            <span class="tabmenu-n" data-count aria-hidden="true"></span>
+          </button>
+          <button class="tabmenu-i" role="menuitem" tabindex="-1" data-kind="familiar">
+            <span class="tabmenu-ic ic-familiar" aria-hidden="true"></span>
+            <span class="tabmenu-l">Familiars</span>
+            <span class="tabmenu-n" data-count aria-hidden="true"></span>
+          </button>
+          <button class="tabmenu-i" role="menuitem" tabindex="-1" data-kind="trinket">
+            <span class="tabmenu-ic ic-trinket" aria-hidden="true"></span>
+            <span class="tabmenu-l">Trinkets</span>
+            <span class="tabmenu-n" data-count aria-hidden="true"></span>
+          </button>
+          <button class="tabmenu-i" role="menuitem" tabindex="-1" data-kind="card">
+            <span class="tabmenu-ic ic-card" aria-hidden="true"></span>
+            <span class="tabmenu-l">Cards</span>
+            <span class="tabmenu-n" data-count aria-hidden="true"></span>
+          </button>
+          <button class="tabmenu-i" role="menuitem" tabindex="-1" data-kind="pill">
+            <span class="tabmenu-ic ic-pill" aria-hidden="true"></span>
+            <span class="tabmenu-l">Pills</span>
+            <span class="tabmenu-n" data-count aria-hidden="true"></span>
+          </button>
+        </div>
+      </span>
+    <button class="tab" data-tab="bestiary">Enemies</button>
+    <button class="tab" data-tab="overlay">Overlay</button>
+    <button class="tab" data-tab="settings">Settings</button>
+    <button class="tab" data-tab="unlocks">Unlocks</button>
+    <button class="spacer"></button>
+    <button id="play" class="ghost play" title="Launch the game through Steam">Play</button>
+    <button id="theme-toggle" class="ghost" title="Switch between Devil and Angel"><span class="glyph">⛧</span><span id="theme-name">Devil</span></button>
+    <button id="panel-toggle" class="ghost" title="Toggle the always-on-top panel">Floating panel</button>
+  </nav>
+
+  <section id="run" class="page active">
+    <header class="runbar">
+      <div>
+        <h1 id="character">—</h1>
+        <p class="sub"><span id="seed">no run yet</span><span id="floor"></span><span id="curses" class="cursetag"></span><span id="flight" class="pill" hidden>flight</span></p>
+        <p id="char-warning" class="warn hidden"></p>
+      </div>
+      <div class="right">
+        <span id="live" class="badge">checking…</span>
+        <span id="roomtag" class="badge hidden"></span>
+      </div>
+    </header>
+
+    <p id="launch-error" class="warn hidden"></p>
+    <div id="stats" class="stats"></div>
+    <p id="warnings" class="warn"></p>
+
+    <div id="build-notes"></div>
+
+    <h2>Considering a pedestal?</h2>
+    <p class="muted small">The log knows a pedestal is there but not what's on it.
+      Read it off the screen, or just name it.</p>
+    <div class="searchbar">
+      <input id="check" list="allitems" placeholder="Type an item you're looking at…">
+      <button id="scan" class="ghost" title="Look at the game window and identify the pedestals">Scan room</button>
+    </div>
+    <p id="scan-status" class="muted small"></p>
+    <div id="reroll"></div>
+    <div id="check-result"></div>
+
+    <h2>Items <span id="count" class="muted"></span></h2>
+    <div class="addrow">
+      <input id="add" list="alladdable" placeholder="Add anything by hand — item, trinket, card or pill…">
+      <datalist id="allitems"></datalist>
+      <datalist id="alladdable"></datalist>
+    </div>
+    <div id="sections"></div>
+  </section>
+
+  <section id="browse" class="page">
+    <div class="searchbar">
+      <input id="q" placeholder="Search all items…" autocomplete="off">
+      <select id="kind">
+        <option value="">All kinds</option>
+        <option value="passive">Passive</option>
+        <option value="active">Active</option>
+        <option value="familiar">Familiar</option>
+        <option value="trinket">Trinket</option>
+        <option value="card">Card</option>
+        <option value="pill">Pill</option>
+      </select>
+      <select id="stat">
+        <option value="">Any stat</option>
+        <option value="damage">Damage</option>
+        <option value="firedelay">Tears</option>
+        <option value="range">Range</option>
+        <option value="speed">Speed</option>
+        <option value="shotspeed">Shot speed</option>
+        <option value="luck">Luck</option>
+      </select>
+      <select id="pool">
+        <option value="">Any pool</option>
+      </select>
+      <div class="sortrow">
+        <label class="sortlab" for="isort">Sort</label>
+        <select id="isort">
+          <option value="">Default order</option>
+          <option value="name">Name A-Z</option>
+          <option value="name-desc">Name Z-A</option>
+          <option value="id">Number, grouped by kind</option>
+          <option value="kind">Kind, then name</option>
+          <option value="charge">Charge cost, low first</option>
+          <option value="devil">Devil price, cheapest first</option>
+          <option value="dmg">Damage up, biggest first</option>
+          <option value="conf">Least verified first</option>
+        </select>
+      </div>
+    </div>
+    <p id="browse-count" class="muted"></p>
+    <ul id="results" class="results"></ul>
+  </section>
+
+  <section id="unlocks" class="page">
+    <div class="searchbar">
+      <input id="aq" placeholder="Search achievements…">
+      <select id="afilter">
+        <option value="locked" selected>Still locked</option>
+        <option value="unlocked">Unlocked</option>
+        <option value="all">All</option>
+      </select>
+    </div>
+    <div id="pinned"></div>
+    <p id="acount" class="muted"></p>
+    <ul id="alist" class="results"></ul>
+  </section>
+
+  <section id="bestiary" class="page">
+    <div class="searchbar">
+      <input id="bq" placeholder="Search enemies — name, or describe it: &quot;red fly&quot;">
+      <select id="bfilter">
+        <option value="fight">Enemies &amp; bosses</option>
+        <option value="boss">Bosses only</option>
+        <option value="all">Everything, incl. effects &amp; pickups</option>
+      </select>
+      <div class="sortrow">
+        <label class="sortlab" for="bsort">Sort</label>
+        <select id="bsort">
+          <option value="">Default order</option>
+          <option value="name">Name A-Z</option>
+          <option value="hp-desc">Health, high to low (floor 5)</option>
+          <option value="hp-asc">Health, low to high (floor 5)</option>
+          <option value="boss">Bosses first</option>
+          <option value="type">Type number</option>
+        </select>
+      </div>
+    </div>
+    <p id="bcount" class="muted"></p>
+    <ul id="blist" class="results"></ul>
+  </section>
+
+
+  <section class="page" id="overlay">
+  <h1>Overlay</h1>
+  <p class="muted small">The always-on-top readout that sits over the game. Toggle it any
+    time with <kbd>⇧⌘P</kbd>.</p>
+
+  <div class="ovtop">
+    <div class="ovscreen-wrap">
+      <div class="prow">
+        <button class="ghost" id="panel-show">Show it</button>
+        <button class="ghost" id="panel-reset">Reset all</button>
+      </div>
+      <!-- The mini screen. Aspect ratio and the panel rectangle inside it both come
+           from the real window, so this is a picture of where the panel IS, not a
+           diagram of where it ought to be. -->
+      <div class="ovscreen" id="ovscreen">
+        <div class="ovscreen-label" id="ovscreen-label"></div>
+        <div class="ovpanel" id="ovpanel" tabindex="0" role="group"
+             aria-label="Drag to move the overlay">
+          <div class="ovpanel-inner" id="ovpanel-inner"></div>
+        </div>
+      </div>
+      <p class="desc" id="ovhint">Drag the readout to move the real panel.</p>
+      <div class="ovcorners">
+        <button class="chip" data-corner="topLeft">Top left</button>
+        <button class="chip" data-corner="topRight">Top right</button>
+        <button class="chip" data-corner="bottomLeft">Bottom left</button>
+        <button class="chip" data-corner="bottomRight">Bottom right</button>
+        <button class="chip" data-corner="free">Free</button>
+      </div>
+    </div>
+
+    <div class="ovparts">
+      <h3>On the panel</h3>
+      <p class="desc">Click to take something off. It disappears from the preview and
+        from the real panel at the same time.</p>
+      <div class="ovchips" id="ovchips-on"></div>
+      <h3>Off the panel</h3>
+      <p class="desc">Click to put it back.</p>
+      <div class="ovchips" id="ovchips-off"></div>
+    </div>
+  </div>
+
+<h3>Behaviour</h3>
+<div class="setting">
+  <label class="switch pset">
+    <input type="checkbox" data-panel="clickThrough">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Click through</span>
+  </label>
+  <p class="desc">The mouse passes straight to the game, so the panel can never swallow a click. It also switches off the panel's own close button, slider and dragging — position it first, then turn this on.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="locked">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Lock position</span>
+  </label>
+  <p class="desc">Stops it being dragged by accident. The controls keep working.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="aboveFullscreen">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Stay above fullscreen</span>
+  </label>
+  <p class="desc">Uses a window level that clears a fullscreen game. Turn it off if the panel starts covering something it should not, like a screen saver.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="autoShow">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Show when the game starts</span>
+  </label>
+  <p class="desc">Appears on its own when Isaac launches.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="autoHide">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Hide when the game quits</span>
+  </label>
+  <p class="desc">Gets out of the way when you stop playing.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="dimWhenIdle">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Fade while not playing</span>
+  </label>
+  <p class="desc">Drops to the opacity below whenever no game is running.</p>
+  <div class="prow">
+    <span class="switch-name">Faded opacity</span>
+    <input type="range" data-panel="idleOpacity" data-unit="%" min="0.05" max="1" step="0.05">
+    <output data-out="idleOpacity"></output>
+  </div>
+  <p class="desc">How far back it fades while idle.</p>
+
+</div>
+
+<h3>Placement</h3>
+<div class="setting">
+  <div class="prow">
+    <span class="switch-name">Corner</span>
+    <select data-panel="corner" class="psel"><option value="free">Wherever I drag it</option><option value="topLeft">Top left</option><option value="topRight">Top right</option><option value="bottomLeft">Bottom left</option><option value="bottomRight">Bottom right</option></select>
+  </div>
+  <p class="desc">Anything but the first re-seats the panel automatically, including after it grows or shrinks.</p>
+  <div class="prow">
+    <span class="switch-name">Edge margin</span>
+    <input type="range" data-panel="margin" data-unit="px" min="0" max="160" step="2">
+    <output data-out="margin"></output>
+  </div>
+  <p class="desc">Gap from the screen edge when snapped.</p>
+  <div class="prow">
+    <span class="switch-name">Display</span>
+    <select data-panel="screenIndex" class="psel"></select>
+  </div>
+  <p class="desc">Which screen to pin to. Useful when the game owns one of them.</p>
+
+</div>
+
+<h3>Size</h3>
+<div class="setting">
+  <div class="prow">
+    <span class="switch-name">Width</span>
+    <input type="range" data-panel="width" data-unit="px" min="170" max="460" step="2">
+    <output data-out="width"></output>
+  </div>
+  <p class="desc">The panel is as tall as its contents; only width is yours.</p>
+  <div class="prow">
+    <span class="switch-name">Text size</span>
+    <input type="range" data-panel="scale" data-unit="x" min="0.7" max="1.8" step="0.05">
+    <output data-out="scale"></output>
+  </div>
+  <p class="desc">Scales the whole readout, not just the numbers.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="compact">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Compact stats</span>
+  </label>
+  <p class="desc">All six stats on one wrapped line instead of a row each.</p>
+  <div class="prow">
+    <span class="switch-name">Decimal places</span>
+    <input type="range" data-panel="decimals" data-unit="" min="0" max="3" step="1">
+    <output data-out="decimals"></output>
+  </div>
+  <p class="desc">How precise the numbers read.</p>
+
+</div>
+
+<h3>What it shows</h3>
+<div class="setting">
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showCharacter">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Character name</span>
+  </label>
+  <p class="desc"></p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showFloor">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Floor number</span>
+  </label>
+  <p class="desc"></p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showSeed">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Seed</span>
+  </label>
+  <p class="desc">Selectable, so you can copy it out of the panel.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showTags">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Curses, flight and room</span>
+  </label>
+  <p class="desc">The things that change how you read everything else.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showUnverified">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Unverified-stat warning</span>
+  </label>
+  <p class="desc">Which of this character's base stats we are not certain of.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showDeltas">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Change from the last pickup</span>
+  </label>
+  <p class="desc">The +0.70 / −2.55 next to each stat.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showLast">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Name of the last pickup</span>
+  </label>
+  <p class="desc">What caused those changes.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showRecent">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Recent pickups</span>
+  </label>
+  <p class="desc">A short list of what came before it.</p>
+  <div class="prow">
+    <span class="switch-name">How many recent</span>
+    <input type="range" data-panel="recentCount" data-unit="" min="1" max="8" step="1">
+    <output data-out="recentCount"></output>
+  </div>
+  <p class="desc"></p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showShots">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Shot count</span>
+  </label>
+  <p class="desc">Only ever shown when you have more than one.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showFooter">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Item count and status</span>
+  </label>
+  <p class="desc">The bottom strip with the live / scanning dot.</p>
+
+</div>
+
+<h3>Stats</h3>
+<div class="setting pgrid">
+  <p class="desc">Switch off anything you do not read mid-run — the panel shrinks to fit.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showDamage">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Damage</span>
+  </label>
+  <p class="desc"></p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showTears">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Tears</span>
+  </label>
+  <p class="desc"></p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showRange">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Range</span>
+  </label>
+  <p class="desc"></p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showShotSpeed">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Shot speed</span>
+  </label>
+  <p class="desc"></p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showSpeed">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Speed</span>
+  </label>
+  <p class="desc"></p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="showLuck">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Luck</span>
+  </label>
+  <p class="desc"></p>
+
+</div>
+
+<h3>Appearance</h3>
+<div class="setting">
+  <div class="prow">
+    <span class="switch-name">Accent stat</span>
+    <select data-panel="accent" class="psel"><option value="Damage">Damage</option><option value="Tears">Tears</option><option value="Range">Range</option><option value="Shot speed">Shot speed</option><option value="Speed">Speed</option><option value="Luck">Luck</option><option value="none">None</option></select>
+  </div>
+  <p class="desc">The one number drawn in the hot colour. Pick whichever you actually watch.</p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="border">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Border and dividers</span>
+  </label>
+  <p class="desc">Off gives a frameless readout with no rules between sections.</p>
+  <div class="prow">
+    <span class="switch-name">Corner radius</span>
+    <input type="range" data-panel="cornerRadius" data-unit="px" min="0" max="18" step="1">
+    <output data-out="cornerRadius"></output>
+  </div>
+  <p class="desc"></p>
+  <label class="switch pset">
+    <input type="checkbox" data-panel="shadow">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Drop shadow</span>
+  </label>
+  <p class="desc">What separates the panel from the game behind it.</p>
+
+</div>
+</section>
+
+  <section class="page" id="settings">
+  <h1>Settings</h1>
+  <p class="muted small">Motion only — nothing here touches your save.</p>
+
+  <h2>Motion</h2>
+
+  <div class="setting">
+    <label class="switch">
+      <input type="checkbox" id="fx-anim">
+      <span class="switch-track"><span class="switch-knob"></span></span>
+      <span class="switch-name">Entry animations</span>
+    </label>
+    <p class="desc">The motion each row makes as it scrolls into view.</p>
+  </div>
+
+  <div class="setting">
+    <label class="switch">
+      <input type="checkbox" id="fx-eff">
+      <span class="switch-track"><span class="switch-knob"></span></span>
+      <span class="switch-name">Effect overlays</span>
+    </label>
+    <p class="desc">The poison, fire and blood wash that fades over a row.</p>
+  </div>
+
+<!-- ============================================================ -->
+
+<div class="setting">
+  <label class="switch">
+    <input type="checkbox" id="fx-min">
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Minimalist effects</span>
+  </label>
+  <p class="desc">Only items and enemies that really have the effect show it; everything else stays still.</p>
+</div>
+
+<div class="setting">
+  <label class="switch">
+    <input type="checkbox" id="fx-bg" checked>
+    <span class="switch-track"><span class="switch-knob"></span></span>
+    <span class="switch-name">Animated backgrounds</span>
+  </label>
+  <p class="desc">An item's effect drifts behind its detail card. Off keeps the backdrop but freezes it.</p>
+</div>
+
+</section>
+
+  <div id="card" hidden>
+    <div class="cardpanel">
+      <button class="x" id="cardx" title="Close">&#215;</button>
+      <div class="cardbody" id="cardbody"></div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

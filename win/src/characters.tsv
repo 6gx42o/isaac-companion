@@ -1,0 +1,19 @@
+id	name	damage	tears	range	speed	shotSpeed	luck	flight	damageMultiplier	fireDelayMultiplier	unverified
+0	Isaac	3.5	0	23.75	1	1	0		1	1	
+1	Magdalene	3.5	0	23.75	0.85	1	0		1	1	range,tears
+2	Cain	3.5	0	23.75	1.1	1	0		1	1	range,shotSpeed
+3	Judas	3.5	0	23.75	1	1	0		1.35	1	damageMultiplier,speed
+4	???	3.5	0	23.75	1	1	0		1	1	speed,range,tears
+5	Eve	3.5	0	23.75	1	1	0		0.75	1	damageMultiplier,speed
+6	Samson	3.5	-0.1	23.75	1	1	0		1	1	tears,damage
+7	Azazel	3.5	0	23.75	1	1	0	1	1	0.267	fireDelayMultiplier,range
+8	Lazarus	3.5	0	23.75	1	1	0		1	1	speed,tears
+9	Eden	3.5	0	23.75	1	1	0		1	1	damage,tears,speed,range,shotSpeed,luck
+10	The Lost	3.5	0	23.75	1	1	0	1	1	1	damage,speed
+11	Lazarus Risen	3.5	0	23.75	1	1	0		1.2	1	damageMultiplier
+12	Dark Judas	3.5	0	23.75	1	1	0		2	1	damageMultiplier
+13	Lilith	3.5	0	23.75	1	1	0		1	1	damage,tears,speed
+14	Keeper	3.5	0	23.75	1	1	0		1	1	damage,tears,speed
+15	Apollyon	3.5	0	23.75	1	1	0		1	1	speed,tears
+16	The Forgotten	3.5	0	23.75	1	1	0		1	1	damage,tears,range
+17	The Forgotten Soul	3.5	0	23.75	1	1	0	1	1	1	damage,tears,speed

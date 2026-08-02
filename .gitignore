@@ -1,0 +1,23 @@
+# Build output
+.build/
+build/
+dist/
+win/target/
+*.dSYM/
+# The game's extractor drops its own log next to whatever ran it.
+ResourceExtractor_log.txt
+
+# Generated, and large: the site inlines every installer as base64, so the built
+# page is ~11 MB. Regenerate it with dev/build-site.py rather than committing it.
+dev/site.html
+dev/payloads.js
+dev/preview.html
+Resources/*.iconset/
+
+# NOT redistributed. This is a snapshot of the External Item Descriptions mod's own
+# description text -- EID ships without a licence, so it is not ours to put in a
+# public repository. The app builds it from your own EID install with
+# `swift run ingestctl vendor`; see the README.
+Sources/IsaacCompanionApp/VendoredData/eid.abplus.json
+
+.DS_Store
