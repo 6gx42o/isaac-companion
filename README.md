@@ -15,7 +15,7 @@ log while you play and tells you what your damage and fire rate **actually are**
 [![Tests](https://img.shields.io/badge/tests-127-7e9c46?style=flat-square)](#tests)
 [![No mod required](https://img.shields.io/badge/achievements-still%20count-d9a441?style=flat-square)](#no-mod-required)
 
-<img src="docs/img/overlay.png" width="330" alt="The overlay showing Cain with Ipecac's +21.00 damage and -2.55 tears">
+<img src="docs/img/overlay-panel.png" width="330" alt="The overlay showing Cain with Ipecac's +21.00 damage and -2.55 tears">
 
 </div>
 
