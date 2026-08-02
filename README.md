@@ -1,24 +1,102 @@
+<div align="center">
+
+<img src="Resources/icon-1024.png" width="120" alt="">
+
 # Isaac Companion
 
-A live run tracker and item reference for **The Binding of Isaac: Afterbirth+**.
+**Know what you just picked up.**
 
-A **macOS app** with an always-on-top game overlay, a full item/enemy/achievement
-browser and a pedestal scanner — plus a **Windows build** running the same log parser
-and the same stat engine.
+A live stat readout for *The Binding of Isaac: Afterbirth+* — it reads the game's own
+log while you play and tells you what your damage and fire rate **actually are**.
 
-Tails the game's own `log.txt`, so it knows what you picked up without any input from
-you — and computes what your stats *actually are*, which no wiki or in-game mod does.
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-b81f22?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/macOS%2014%2B-universal-e2542b?style=flat-square)](#install)
+[![Windows](https://img.shields.io/badge/Windows-x64-9a7f75?style=flat-square)](#the-windows-build)
+[![Tests](https://img.shields.io/badge/tests-127-7e9c46?style=flat-square)](#tests)
+[![No mod required](https://img.shields.io/badge/achievements-still%20count-d9a441?style=flat-square)](#no-mod-required)
 
-**It requires no mod and never touches the game.** Enabling any Workshop mod in AB+
-disables Steam achievements; this reads a log file the game already writes, so your
-trophies keep counting.
+<img src="docs/img/overlay.png" width="330" alt="The overlay showing Cain with Ipecac's +21.00 damage and -2.55 tears">
+
+</div>
+
+---
+
+Isaac never shows you your real numbers. A wiki tells you Sad Onion is `+0.7 tears`; it
+cannot tell you what your tears per second are after the curve, the floor and the three
+other things you are carrying. This does that, live, while you play.
+
+It also tells you the thing you actually want to know at a pedestal: **what did the item
+I just took change?** The overlay above is a real run — Ipecac landed, and it is showing
+`+21.00` damage and `−2.55` tears against the item's name.
+
+## No mod required
+
+Enabling any Workshop mod in Afterbirth+ **disables Steam achievements**. So this is
+fully external: it tails a log file the game already writes, reads the game's own
+unpacked resources, and never writes anything back. No Lua runs, nothing is installed
+into Isaac, and your trophies keep counting.
+
+## Install
+
+Grab a build from **[the download page](https://claude.ai/code/artifact/5d9c3018-7a5c-4216-96b8-54ae83aea5b6)**,
+or build it yourself — see [Building](#building).
+
+| | |
+|---|---|
+| **macOS** | `.dmg`, `.pkg` or `.zip` — one universal binary, Apple Silicon *and* Intel. macOS 14+. |
+| **Windows** | a single `.exe`, no installer and no runtime. |
+
+The macOS build is ad-hoc signed rather than notarised, so clear the quarantine flag
+once after installing:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/IsaacCompanion.app
+```
+
+## What it does
+
+### The overlay
+
+<img src="docs/img/overlay-tab.png" alt="The Overlay tab: a live mini-screen of the display with the panel drawn at its real position, and chips to add or remove parts of it">
+
+A borderless always-on-top panel over the fullscreen game, with its own tab for
+configuring it: a **live mini-screen of your actual display** showing the panel where it
+really is. Drag the miniature and the real window moves. Click a part of the readout to
+take it off.
+
+Around 35 settings — click-through (the mouse passes straight to the game), corner
+snapping, per-display placement, opacity, text scale, compact mode, accent stat — and it
+shows itself when Isaac launches and hides when you quit.
+
+### The browser
+
+<img src="docs/img/items.png" alt="The item browser: 775 items with sprites, stat deltas and confidence tags">
+
+Every item, card, pill and trinket, searchable by name, by effect, or **by colour
+measured off the sprite itself** — so "grey" or "gold" finds the one you half-remember.
+Each row shows what it really changes and how confident the data is.
+
+<img src="docs/img/enemies.png" alt="The bestiary: 359 enemies with HP and colour tags, sprites playing their idle animation">
+
+359 enemies and bosses with HP, and 403 achievements with their unlock conditions.
+Enemy icons play the idle loop out of their own animation files; pills cycle every
+colour the game deals.
+
+### The room advisor
+
+In a Devil, Treasure or Angel room it reads the pedestals off the screen — passively,
+via ScreenCaptureKit, with no injection — and scores what is on them against your build
+and what is left in that pool. It refuses to answer where a stat score cannot represent
+the item.
+
+---
 
 ## Targeting Afterbirth+, deliberately
 
-Your install is `v1.06.T1` — Afterbirth+, collectible IDs up to 552. Almost every
-online source now serves **Repentance** data, which is wrong here in ways that are
-invisible until the numbers are quietly incorrect. So the data build asserts, and
-fails loudly if any of these break:
+This targets Afterbirth+ (`v1.06.T1`), where collectible IDs stop at 552. Almost every
+source online now serves **Repentance** data, which is wrong here in ways that stay
+invisible until a number is quietly incorrect. So the data build asserts, and fails
+loudly if any of these break:
 
 - max collectible id ≤ 552 (Repentance goes to 732)
 - Sad Onion is `+0.7` tears (Repentance: 0.72)
@@ -27,7 +105,7 @@ fails loudly if any of these break:
 - no `quality` field anywhere — **AB+ has no item quality**; showing one would be
   importing a Repentance concept
 
-## Running it
+## Building
 
 ```bash
 ./make-app.sh && open build/IsaacCompanion.app          # dev build, this Mac's arch
@@ -54,7 +132,8 @@ features. Sprite atlasing, gzipped JSON, and extract→harvest→delete are alwa
 Actual footprint: **1.9 MB app + 3.3 MB support** (328 KB built data — 674 sprites in
 one 236 KB atlas, plus gzipped JSON — and a 3 MB harvest cache).
 
-## Where the data comes from
+<details>
+<summary><b>Where every number comes from, and how confident it is</b></summary>
 
 | What | Source |
 |---|---|
@@ -75,6 +154,8 @@ Every item is graded and the grade is shown in the UI:
 The build **fails** if any item claims a stat change and has neither numbers nor an
 explicit conditional/non-numeric classification. No silent gaps.
 
+</details>
+
 ## The stat model
 
 Validated against known in-game values before anything was built on it:
@@ -91,7 +172,7 @@ Anything the game does not document — the ordering of simultaneous tear modifi
 whether two ×1.5 damage multipliers share a slot — is shown with a `~` and a reason,
 not guessed at.
 
-## Development
+## Tests
 
 ```bash
 swift test                 # 114 tests
@@ -104,7 +185,8 @@ swift run ingestctl vendor Sources/IsaacCompanionApp/VendoredData/eid.abplus.jso
 `dev/preview.html` renders the real web UI against real bundle data with the Swift
 bridge stubbed, for iterating on the UI without launching the app.
 
-## Character base stats must exclude starting items
+<details>
+<summary><b>Why Cain's base luck is 0 (and Lazarus's range is 23.75)</b></summary>
 
 The log reports a character's starting items as ordinary pickups, so any stat a
 starting item grants must **not** also appear in that character's base row or it gets
@@ -118,7 +200,10 @@ Two real cases: Cain starts with Lucky Foot (+1 luck) — his base luck is 0, no
 Lazarus Risen starts with Anemic (+5 range) — which is where the long-running
 "is his range 23.75 or 28.75?" dispute came from. It is 23.75; the +5 is the item.
 
-## Stat cards show base + change = total
+</details>
+
+<details>
+<summary><b>Why a card shows the composed change, not the item's printed number</b></summary>
 
 ```
 DAMAGE          SPEED
@@ -136,7 +221,10 @@ the clamped movement, so the arithmetic still reconciles.
 `StatBreakdownTests.swift` asserts `base + fromItems == value` across every stat,
 including downgrades and clamps.
 
-## What the log does and does not report
+</details>
+
+<details>
+<summary><b>What the log does and does not report</b></summary>
 
 `Adding collectible N (Name)` is the **only** pickup line the game writes. There is no
 equivalent for trinkets, cards or pills — verified by surveying every distinct line
@@ -177,6 +265,8 @@ depending on kind — so a held record carries its kind and lookups are keyed on
 `(kind, id)`. The add box suffixes them (`0 - The Fool (card)`) to keep that
 unambiguous. Tested in `SectionTests.swift`.
 
+</details>
+
 ## Cross-item reasoning
 
 The part no other tool does. EID shows one pedestal's text with no knowledge of what
@@ -204,7 +294,8 @@ item against any build:
 - **multishot** — additive, never multiplied
 - **transformation** — live n/3 progress across all 14 sets
 
-## Two themes: Devil and Angel
+<details>
+<summary><b>The two themes, and the WebKit trap they hit</b></summary>
 
 Both come from the game's own rooms, and both keep the same rule — **two accents with
 two jobs that never trade places**: `--mark` for what is dead, `--hot` for your live
@@ -234,7 +325,10 @@ The fix is `.no-transition` on `<html>` for exactly one frame across the swap, r
 after two `requestAnimationFrame`s. The switch still reads as a change because the page
 plays a single `themeshift` dip-and-lift instead.
 
-## The floating panel
+</details>
+
+<details>
+<summary><b>How the panel stays over a fullscreen game</b></summary>
 
 The always-on-top readout is a **native** `NSPanel`, not a second web view —
 `.fullScreenAuxiliary` + `.canJoinAllSpaces` on a non-activating panel is the only
@@ -251,7 +345,10 @@ and border, never its text — a slider that dimmed the numbers too would make t
 useless at exactly the setting you most want it at. `isOpaque = false` and a clear
 `backgroundColor` are what let it fade onto the game rather than onto system grey.
 
-## Motion
+</details>
+
+<details>
+<summary><b>Motion, and why it is all whole-pixel</b></summary>
 
 Everything animates, but **only on real change**. The run view re-renders on every log
 line, so blanket entry animations would flicker the whole list several times a second.
@@ -266,7 +363,10 @@ new or changed content:
 
 Tracking resets on a new seed. All of it collapses under `prefers-reduced-motion`.
 
-## Visual direction
+</details>
+
+<details>
+<summary><b>Visual direction</b></summary>
 
 Devil Room: near-black warm ground, **two reds with two jobs that never trade places** —
 `--blood` marks what is dead (rails, glyphs, strike-throughs), `--ember` marks your live
@@ -291,7 +391,10 @@ Two things carry the information design:
   synergy engine in Swift, not from string-matching in JS, so the row and the verdicts
   can never disagree.
 
-## Known-bug regressions
+</details>
+
+<details>
+<summary><b>Bugs this has already had, kept as regression tests</b></summary>
 
 An adversarial review pass (four reviewers, every finding independently refuted-or-
 confirmed) found 17 real defects. The ones worth remembering:
@@ -311,21 +414,7 @@ confirmed) found 17 real defects. The ones worth remembering:
 - **`rebuild()` restarted the log tailer**, replaying from the top and wiping every
   manual entry.
 
-## The overlay
-
-A borderless, always-on-top panel that sits over the fullscreen game. It shows your six
-stats — and, the part that makes it worth glancing at, **what the item you just picked
-up changed**: a per-stat delta held until the next pickup, with the item's name under
-it. Ipecac reads `24.50 +21.00` in green and `~1.20 −2.55` in red.
-
-It has its own **Overlay tab** in the app: a live mini-screen showing the panel at its
-real position on your real display. Drag the miniature to move the actual window; click
-a part of it to take that part off. Around 35 settings — click-through (the mouse passes
-to the game), corner snapping, per-display placement, opacity, text scale, compact mode,
-decimal places, accent stat, and a switch for every element.
-
-Auto-show and auto-hide hang off the game-process watch, so it appears when Isaac
-launches and gets out of the way when you quit.
+</details>
 
 ## The Windows build
 
