@@ -280,36 +280,43 @@ h2{font-family:var(--serif);font-size:clamp(24px,3.4vw,36px);margin:0 0 10px;let
 .detect.no{border-color:var(--markLine)}
 .detect b{color:var(--ash);font-weight:600}
 
-.dlgrid{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);
-  grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
-.dlcard{display:flex;flex-direction:column;align-items:flex-start;gap:5px;
-  background:var(--panel);border:0;padding:17px 17px 19px;text-align:left;cursor:pointer;
-  color:inherit;font:inherit;position:relative;
-  transition:background-color var(--t) var(--ease)}
-.dlcard:hover{background:var(--panel2)}
-.dlcard .dlkind{font-family:var(--mono);font-size:9px;letter-spacing:.22em;color:var(--mark)}
-.dlcard .dlname{font-family:var(--serif);font-size:19px;line-height:1.15}
-.dlcard .dldesc{color:var(--dim);font-size:12.5px;line-height:1.5}
-.dlcard .dlsize{margin-top:4px;font-family:var(--mono);font-size:10px;
-  letter-spacing:.1em;color:var(--faint);font-variant-numeric:tabular-nums}
+/* The one button. Big enough that it is the first thing you reach for and the only
+   thing you have to understand -- it names the exact build you are getting and how
+   big it is, so nothing is hidden behind the size of it. */
+.dlhero{margin:4px 0 0}
+.dlmain{display:flex;align-items:center;gap:18px;width:100%;max-width:520px;
+  padding:20px 26px;cursor:pointer;text-align:left;
+  background:var(--panel);color:var(--ash);
+  border:1px solid var(--mark);border-radius:3px;position:relative;overflow:hidden;
+  transition:transform var(--t) var(--ease),border-color var(--t) var(--ease),
+             background-color var(--t) var(--ease),box-shadow var(--t) var(--ease)}
+.dlmain:hover{transform:translateY(-2px);border-color:var(--hot);background:var(--panel2);
+  box-shadow:0 16px 40px -18px color-mix(in srgb,var(--mark) 70%,transparent)}
+.dlmain:active{transform:translateY(0)}
+.dlmain:focus-visible{outline:2px solid var(--hot);outline-offset:3px}
+/* the sheen the other buttons on this page use, so it belongs to the same family */
+.dlmain::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,
+  transparent,color-mix(in srgb,var(--hot) 22%,transparent),transparent);
+  transform:translateX(-120%)}
+.dlmain:hover::after{animation:shine .75s var(--ease)}
+.dlmain-arrow{flex:0 0 auto;width:38px;height:38px;display:grid;place-items:center;
+  border:1px solid var(--rule2);border-radius:50%;font-size:17px;color:var(--hot);
+  transition:border-color var(--t) var(--ease),transform var(--t) var(--ease)}
+.dlmain:hover .dlmain-arrow{border-color:var(--hot);transform:translateY(2px)}
+.dlmain-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.dlmain-title{font-family:var(--mono);font-size:13px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ash)}
+.dlmain-sub{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+  color:var(--faint);font-variant-numeric:tabular-nums}
+.dlmain-note{color:var(--dim);font-size:12.5px;margin:11px 0 0;max-width:56ch}
 
-/* The one we think fits you. A left rule rather than a filled block: it has to read
-   as a recommendation, not as "the others are disabled". */
-.dlcard.pick{background:var(--panel2);box-shadow:inset 3px 0 0 var(--hot)}
-.dlcard.pick .dlkind{color:var(--hot)}
-.dlcard.pick::after{content:"suggested";position:absolute;top:15px;right:15px;
-  font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;
-  color:var(--hot);opacity:.85}
-/* Off a Mac nothing is suggested and the whole grid steps back, but every card stays
-   clickable -- people download on one machine to install on another. */
-.dlgrid.foreign .dlcard{opacity:.66}
-.dlgrid.foreign .dlcard:hover{opacity:1}
-/* The cards for the OTHER platform. Dimmed, never hidden and never disabled: you may
-   well be on a Mac fetching the Windows build for someone else. */
-.dlcard.dim{opacity:.5}
-.dlcard.dim:hover{opacity:1}
-.dlcard.win .dlkind{color:var(--dim)}
-.dlcard.win.pick .dlkind{color:var(--hot)}
+/* Everything else, deliberately quiet: present for the people who want a pkg or are
+   downloading for another machine, invisible as a decision for everyone else. */
+.dlalt{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:22px 0 0}
+.dlalt-label{font-family:var(--mono);font-size:9px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--faint);margin-right:3px}
+.chip.dlopt.current{border-color:var(--hot);color:var(--ash)}
+.chip.dlopt.current::after{content:" \2713";color:var(--hot)}
 
 /* ---- item index ---- */
 .searchwrap{position:sticky;top:49px;z-index:40;padding:20px 0 12px;
@@ -2771,37 +2778,28 @@ footer a{color:var(--dim)}
         <span id="detect-text">Checking what you are on&#8230;</span>
       </div>
 
-      <div class="dlgrid" id="dlgrid">
-        <button class="dlcard" data-kind="dmg">
-          <span class="dlkind">DMG</span>
-          <span class="dlname">Disk image</span>
-          <span class="dldesc">The familiar window with an Applications shortcut. Drag it
-            across and you are done.</span>
-          <span class="dlsize">__DMGMB__ MB</span>
+      <!-- One button, front and centre. The grid of four equal cards that used to be
+           here made you pick a format before you could do anything, which is a
+           decision most people do not have and should not need. The detection already
+           knows the answer, so it answers: this button IS the right build, named and
+           sized, and the alternatives sit underneath for the people who want them. -->
+      <div class="dlhero">
+        <button class="dlmain" id="dlmain" data-kind="dmg">
+          <span class="dlmain-arrow" aria-hidden="true">&#8595;</span>
+          <span class="dlmain-text">
+            <span class="dlmain-title" id="dlmain-title">Download</span>
+            <span class="dlmain-sub" id="dlmain-sub">working out which build you need&#8230;</span>
+          </span>
         </button>
-        <button class="dlcard" data-kind="pkg">
-          <span class="dlkind">PKG</span>
-          <span class="dlname">Installer</span>
-          <span class="dldesc">Double-click, next, done. Puts it in /Applications for you
-            &#8212; no dragging, no deciding where apps live.</span>
-          <span class="dlsize">__PKGMB__ MB</span>
-        </button>
-        <button class="dlcard win" data-kind="exe">
-          <span class="dlkind">EXE &#183; WINDOWS</span>
-          <span class="dlname">Windows build</span>
-          <span class="dldesc">A single executable, no installer and nothing to
-            unpack. Reads the same log and computes the same stats, then opens the
-            readout in your browser. No overlay or pedestal scanner &#8212; those are
-            macOS window-server features.</span>
-          <span class="dlsize">__EXEMB__ MB</span>
-        </button>
-        <button class="dlcard" data-kind="zip">
-          <span class="dlkind">ZIP</span>
-          <span class="dlname">Just the app</span>
-          <span class="dldesc">No ceremony. Unarchives to the bundle; keep it wherever you
-            like, including not in /Applications.</span>
-          <span class="dlsize">__ZIPMB__ MB</span>
-        </button>
+        <p class="dlmain-note" id="dlmain-note"></p>
+      </div>
+
+      <div class="dlalt" id="dlalt">
+        <span class="dlalt-label">Other formats</span>
+        <button class="chip dlopt" data-kind="dmg">DMG &#183; disk image</button>
+        <button class="chip dlopt" data-kind="pkg">PKG &#183; installer</button>
+        <button class="chip dlopt" data-kind="zip">ZIP &#183; just the app</button>
+        <button class="chip dlopt win" data-kind="exe">EXE &#183; Windows</button>
       </div>
 
       <p class="lead" style="margin-top:22px">A notarised release would just open. This one
@@ -4038,10 +4036,12 @@ function download(kind){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 4000);
 }
-document.querySelectorAll(".dlcard").forEach(b=>{
+document.querySelectorAll(".dlopt").forEach(b=>{
   b.onclick = ()=>download(b.dataset.kind);
 });
-/* The hero button takes the format most people want; the cards cover the rest. */
+/* The hero button downloads whatever the platform check pointed it at. */
+{ const m=$("dlmain"); if(m) m.onclick = ()=>download(m.dataset.kind); }
+/* The old hero button at the top of the page, still there, still the Mac default. */
 { const b=$("dl1"); if(b) b.onclick = ()=>download("dmg"); }
 
 /* ---- what are you on? ----
@@ -4049,10 +4049,11 @@ document.querySelectorAll(".dlcard").forEach(b=>{
    honestly -- Safari reports "Intel Mac OS X" on every Mac ever made, and the WebGL
    renderer string is a guess that breaks under fingerprint blocking. It also would
    not matter: the binary is universal, so both Macs take the same file. Detection
-   only has to answer "can this run here at all", and that it can do. */
+   only has to answer "which single build should this button hand you", and that it
+   can do. */
 (function detectPlatform(){
-  const box = $("detect"), text = $("detect-text"), grid = $("dlgrid");
-  if(!box || !text) return;
+  const box = $("detect"), text = $("detect-text"), main = $("dlmain");
+  if(!box || !text || !main) return;
 
   const ua = navigator.userAgent || "";
   const uaData = navigator.userAgentData;
@@ -4066,39 +4067,49 @@ document.querySelectorAll(".dlcard").forEach(b=>{
   const android = /android/.test(hay);
   const linux = !android && /linux|x11|cros/.test(hay);
 
+  const NAMES = { dmg:"Disk image", pkg:"Installer", zip:"App bundle", exe:"Windows executable" };
+  /* Points the one button at a build and says, on the button, exactly what that is. */
+  const aim = (kind, title, note) => {
+    main.dataset.kind = kind;
+    $("dlmain-title").textContent = title;
+    const mb = (DOWNLOADS[kind] || {}).mb || "?";
+    $("dlmain-sub").textContent = NAMES[kind] + "  \u00b7  " + kind.toUpperCase() + "  \u00b7  " + mb + " MB";
+    $("dlmain-note").innerHTML = note;
+    document.querySelectorAll(".dlopt").forEach(c=>
+      c.classList.toggle("current", c.dataset.kind === kind));
+  };
   const set = (cls, html)=>{ box.className = "detect " + cls; text.innerHTML = html; };
 
   if(mac){
-    set("ok", "You are on a <b>Mac</b> &#8212; every option below runs natively, "
-      + "Apple&nbsp;Silicon or Intel. macOS&nbsp;14 or newer.");
-    // .dmg is the one most people expect from a Mac download.
-    const pick = document.querySelector('.dlcard[data-kind="dmg"]');
-    if(pick) pick.classList.add("pick");
-    document.querySelectorAll('.dlcard.win').forEach(c=>c.classList.add("dim"));
+    set("ok", "You are on a <b>Mac</b> &#8212; this runs natively on Apple&nbsp;Silicon "
+      + "and on Intel.");
+    aim("dmg", "Download for macOS",
+      "Opens a window; drag the app to Applications. Needs macOS&nbsp;14 or newer. "
+      + "One universal binary &#8212; nothing to choose between.");
     return;
   }
-
   if(win){
-    set("ok", "You are on <b>Windows</b> &#8212; take the .exe. Same log reader and same "
-      + "Afterbirth+ stat model as the Mac build; the overlay and the pedestal scanner "
-      + "are macOS-only and are not in it.");
-    const pick = document.querySelector('.dlcard[data-kind="exe"]');
-    if(pick) pick.classList.add("pick");
-    // The Mac formats are the ones that do not apply here.
-    document.querySelectorAll('.dlcard:not(.win)').forEach(c=>c.classList.add("dim"));
+    set("ok", "You are on <b>Windows</b>.");
+    aim("exe", "Download for Windows",
+      "A single executable &#8212; no installer, nothing to unpack. Runs the same log "
+      + "reader and the same stat model as the Mac build; the overlay and the pedestal "
+      + "scanner are macOS-only and are not in it.");
     return;
   }
-
-  grid && grid.classList.add("foreign");
+  // Not a platform it runs on. Still give the button a sensible target, because the
+  // commonest reason to be here on Linux or a phone is fetching it for another machine.
+  aim("dmg", "Download for macOS",
+    "You are not on a machine this runs on, so nothing is pre-selected for you "
+    + "&#8212; pick the build for wherever you are installing it.");
   if(linux){
-    set("no", "You are on <b>Linux</b>. The app is macOS only. This reference works "
-      + "fine here, though.");
+    set("no", "You are on <b>Linux</b>. There is no Linux build &#8212; the reference "
+      + "above works fine here, though.");
   } else if(ios || android){
-    set("no", "You are on a <b>phone or tablet</b>. The app is a desktop macOS app, "
-      + "but this reference is built to work at this size.");
+    set("no", "You are on a <b>phone or tablet</b>. It is a desktop app, but this "
+      + "reference is built to work at this size.");
   } else {
-    set("", "Could not tell what you are on. The app needs <b>macOS&nbsp;14</b> or "
-      + "newer; the reference works anywhere.");
+    set("", "Could not tell what you are on. There are builds for macOS&nbsp;14+ and "
+      + "for Windows.");
   }
 })();
 
