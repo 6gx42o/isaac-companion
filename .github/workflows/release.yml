@@ -26,15 +26,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: The tag matches VERSION
+      # Run on a tag push it checks that tag. Run by hand from a branch there is no tag
+      # to check, so it falls back to VERSION -- which makes the interesting half below
+      # (are the artifacts there, does SHA256SUMS match) runnable on demand.
+      - name: Work out which release to check
+        id: which
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
           FILE="$(tr -d '[:space:]' < VERSION)"
-          if [ "$TAG" != "$FILE" ]; then
-            echo "::error::tag $GITHUB_REF_NAME does not match VERSION ($FILE)"
-            exit 1
-          fi
-          echo "tag and VERSION agree on $FILE"
+          case "$GITHUB_REF_NAME" in
+            v*)
+              if [ "${GITHUB_REF_NAME#v}" != "$FILE" ]; then
+                echo "::error::tag $GITHUB_REF_NAME does not match VERSION ($FILE)"
+                exit 1
+              fi
+              TAG="$GITHUB_REF_NAME"
+              echo "tag and VERSION agree on $FILE"
+              ;;
+            *)
+              TAG="v$FILE"
+              echo "not a tag ($GITHUB_REF_NAME); checking the release for VERSION: $TAG"
+              ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$FILE" >> "$GITHUB_OUTPUT"
 
       - name: The Rust crate agrees too
         run: |
@@ -52,8 +66,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="$GITHUB_REF_NAME"
-          V="${TAG#v}"
+          TAG="${{ steps.which.outputs.tag }}"
+          V="${{ steps.which.outputs.version }}"
           mkdir -p verify && cd verify
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" || {
             echo "::error::no release published for $TAG yet -- cut it with ./package.sh"
