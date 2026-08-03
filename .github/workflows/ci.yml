@@ -107,6 +107,36 @@ jobs:
             if ($page.Content -notmatch "Isaac") { throw "GET / served something unexpected" }
             Write-Host "  ok  GET / serves the readout"
 
+            # The browser: baked catalogue in, art read from the user's own install.
+            $items = Invoke-RestMethod -Uri "http://127.0.0.1:8799/api/items?q=brimstone" -TimeoutSec 5
+            if ($items.total -lt 700) { throw "only $($items.total) items baked in" }
+            if (-not ($items.items.name -contains "Brimstone")) {
+              throw "Brimstone missing from: $($items.items.name -join ', ')"
+            }
+            Write-Host "  ok  /api/items = $($items.total) items, search works"
+
+            $foes = Invoke-RestMethod -Uri "http://127.0.0.1:8799/api/enemies?q=monstro" -TimeoutSec 5
+            if (-not ($foes.enemies.name -contains "Monstro")) { throw "Monstro missing" }
+            Write-Host "  ok  /api/enemies = $($foes.total) entities"
+
+            $ach = Invoke-RestMethod -Uri "http://127.0.0.1:8799/api/achievements?q=pennies" -TimeoutSec 5
+            if ($ach.total -lt 390) { throw "only $($ach.total) achievements baked in" }
+            # The announcement is a sentence; the name is what sits between the quotes.
+            if (-not ($ach.achievements.name -contains "A Bag of Pennies")) {
+              throw "achievement names are not being tidied: $($ach.achievements.name -join ' | ')"
+            }
+            Write-Host "  ok  /api/achievements = $($ach.total), names tidied"
+
+            # A sprite request must not be able to climb out of the sprite folder.
+            try {
+              Invoke-WebRequest -Uri "http://127.0.0.1:8799/sprite/../../../Windows/win.ini" `
+                                -TimeoutSec 5 | Out-Null
+              throw "a traversing sprite request was served"
+            } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
+              if ($_.Exception.Response.StatusCode -ne 404) { throw }
+              Write-Host "  ok  sprite path traversal 404s"
+            }
+
             # And that an unknown path is a 404 rather than something worse.
             try {
               Invoke-WebRequest -Uri "http://127.0.0.1:8799/nope" -TimeoutSec 5 | Out-Null
@@ -118,3 +148,20 @@ jobs:
           } finally {
             if ($proc -and -not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
           }
+
+      # The overlay is raw Win32 through hand-written extern declarations, so the thing
+      # that can silently be wrong is the window creation itself: a bad style constant or
+      # a mis-shaped struct gives a null HWND rather than a compile error. This creates
+      # the window and asks Windows whether it exists.
+      #
+      # It cannot tell you the overlay LOOKS right above a running game. Nothing
+      # automated can; that needs a person at a Windows machine.
+      - name: Overlay window self-test
+        shell: pwsh
+        timeout-minutes: 2
+        run: |
+          $exe = "win\target\release\isaac-companion.exe"
+          $out = & $exe --overlay-selftest 2>&1
+          $out | Write-Host
+          if ($LASTEXITCODE -ne 0) { throw "the overlay window could not be created" }
+          if ($out -notmatch "found_by_name=true") { throw "Windows did not find the window" }

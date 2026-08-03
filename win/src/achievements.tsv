@@ -1,0 +1,404 @@
+id	name	condition
+1	Magdalene	have 7 or more max red hearts at one time
+2	Cain	hold 55 pennies at one time
+3	Judas	kill Satan for the 1st time
+4	The Womb	beat Mom for the 1st time
+5	The Harbingers	beat Mom for the 1st time
+6	A Cube of Meat	beat Mom for the 1st time
+7	The Book of Revelations	beat a horseman for the 1st time
+8	A Noose	beat Mom's Heart 3 times (A Noose = Transcendence)
+9	The Nail	beat Boss Rush with Demon Isaac
+10	A Quarter	beat Mom's Heart 8 times
+11	A Fetus in a Jar	beat Mom's Heart 9 times (A Fetus in a Jar = Dr. Fetus)
+12	A Small Rock	Destroy 100 tinted rocks
+13	Monstro's Tooth	beat Basement II for the 1st time
+14	Lil Chubby	beat Caves II for the 1st time
+15	Loki's Horns	beat Lokii for the 1st time
+16	Something From The Future!	beat the basement 40 times (Steven)
+17	Something Cute	beat the caves 30 times (C.H.A.D.)
+18	Something Sticky	beat the depths 20 times (Gish)
+19	A Bandage	make a super bandage girl (A Bandage = Super Bandage)
+20	A Cross	kill Isaac with Maggy (A Cross = Relic)
+21	A Bag of Pennies	kill Isaac with Cain
+22	The Book of Sin	kill all 7 sins
+23	Little Gish	kill Gish
+24	Little Steven	kill Steven
+25	Little C.H.A.D.	kill C.H.A.D.
+26	A Gamekid	visit 10 arcades
+27	A Halo	kill Mom using the bible
+28	Mr. Mega!	destroy 10 tinted rocks
+29	The D6	Kill Isaac with ???
+30	The Scissors	die 100 times
+31	The Parasite	collect 2 of Bob's Rotten Head, Dead Cat, Max's Head, Tammy's Head
+32	???	beat Mom's Heart 10 times
+33	Everything is Terrible!!! The game just got harder!	beat Mom's Heart 5 times
+34	It Lives!	beat Mom's Heart 11 times
+35	Mom's Contact	become mom (collect 3 mom items in one playthrough)
+36	The Necronomicon	use the Death Card 4 times
+37	Basement Boy	beat the Basement/Cellar without taking damage
+38	Spelunker Boy	beat the Caves/Catacombs without taking damage
+39	Dark Boy	beat the Depths/Necropolis without taking damage
+40	Mamas Boy	beat the Womb/Utero without taking damage
+41	Golden God!	beat ??? and Lamb
+42	Eve	don't pick up any hearts for 2 levels in a row
+43	Mom's Knife	kill Satan with Isaac
+44	The Razor	kill Satan with Eve
+45	Guardian Angel	kill Satan with Maggy
+46	A Bag of Bombs	kill Satan with Cain
+47	A Demon Baby!	beat Dark Room with Demon Isaac
+48	A Forget Me Now	kill Satan with ???
+49	The D20	beat The Chest with Isaac
+50	The Crucifix	beat The Chest with Maggy (Crucifix = Celtic Cross)
+51	Abel	beat Dark Room with Cain
+52	Curved Horn	beat Dark Room with Judas
+53	Sacrificial Dagger	beat Chest with Eve
+54	Blood Lust	kill Isaac with Samson
+55	Blood Penny	beat Chest with Samson
+56	Blood Rights	kill Satan with Samson
+57	The Polaroid	beat the cathedral 5 times
+58	Dad's Key	collect a golden key
+59	The Blue Candle	donate 900 pennies to the store (blue candle)
+60	Burnt Penny	beat Challenge #13
+61	Lucky Toe!	Blow up 20 shop keepers
+62	Epic Fetus	Beat Challenge #19
+63	SMB Super Fan	Beat Challenge #14
+64	Counterfeit Coin	Play the shell game 100 times
+65	Guppy's Hairball	Become Guppy
+66	A Forgotten Horsemen	take 10 items from Angel rooms
+67	Samson	beat 2 levels in a row without taking damage
+68	Something Icky!	beat Cathedral 10 times
+69	!Platinum God! OMG!	collect all items in the game and unlock all secrets and endings minus "the soul" and its 5 unlockable items
+70	Isaac's Head	beat Boss Rush with Isaac
+71	Maggy's Faith	beat Dark Room with Maggy
+72	Judas' Tongue	kill Satan with Judas
+73	???'s Soul	beat Dark Room with ???
+74	Samson's Lock	beat Dark Room with Samson
+75	Cain's Eye	beat Chest with Cain
+76	Eve's Bird Foot	kill Isaac with Eve
+77	The Left Hand	beat Chest with Judas
+78	The Negative	beat Sheol 5 times
+79	Demon Isaac	make 3 deals with the devil in one run
+80	Lazarus	have 4 or more soul hearts at one time
+81	Eden	beat the womb for the 1st time
+82	The Soul	finish the game's final secret
+83	Dead Boy	beat the Chest or Dark Room without taking damage
+84	The Real Platinum God	100% of the game (unlock every item)
+85	Lucky Rock	destroy 100 rocks
+86	The Cellar	Beat all possible bosses in the basement
+87	The Catacombs	Beat all possible bosses in the caves
+88	The Necropolis	Beat all possible bosses in the depths
+89	Rune of Hagalaz	Beat Challenge #1
+90	Rune of Jera	Beat Challenge #2
+91	Rune of Ehwaz	Beat Challenge #3
+92	Rune of Dagaz	Beat Challenge #4
+93	Rune of Ansuz	Beat Challenge #5
+94	Rune of Perthro	Beat Challenge #6
+95	Rune of Berkano	Beat Challenge #7
+96	Rune of Algiz	Beat Challenge #8
+97	Chaos Card	Beat Challenge #9
+98	Credit Card	Beat Challenge #10
+99	Rules Card	Beat Challenge #11
+100	Card Against Humanity	Beat Challenge #12
+101	Swallowed Penny	Beat Challenge #15
+102	Robo Baby 2.0	Beat Challenge #16
+103	Death's Touch	Beat Challenge #17
+104	Technology .5	Beat Challenge #18
+105	Missing No.	Beat Challenge #20
+106	Isaac's Tears	Kill Isaac with Isaac
+107	Guillotine	Kill Isaac with Judas
+108	Judas' Shadow	beat Boss Rush with Judas
+109	Maggy's Bow	beat Boss Rush with Maggy
+110	Cain's Other Eye	beat Boss Rush with Cain
+111	Black Lipstick	beat Dark Room with Eve
+112	Eve's Mascara	beat Boss Rush with Eve
+113	Fate	beat Chest with ???
+114	???'s Only Friend	beat Boss Rush with ???
+115	Samson's Chains	beat Boss Rush with Samson
+116	Lazarus' Rags	kill Isaac with Lazarus
+117	Broken Ankh	kill Satan with Lazarus
+118	Store Credit	beat Chest with Lazarus
+119	Pandora's Box	beat Dark Room with Lazarus
+120	Suicide King	beat Boss Rush with Lazarus
+121	Blank Card	kill Isaac with Eden
+122	Book of Secrets	kill Satan with Eden
+123	Mysterious Paper	beat Chest with Eden
+124	Mystery Sack	beat Dark Room with Eden
+125	Undefined	beat Boss Rush with Eden
+126	Satanic Bible	kill Isaac with Demon Isaac
+127	Daemon's Tail	kill Satan with Demon Isaac
+128	Abaddon	beat Chest with Demon Isaac
+129	Isaac's Heart	kill Isaac with The Lost
+130	The Mind	kill Satan with The Lost
+131	The Body	beat Chest with The Lost
+132	The Soul	beat Dark Room with The Lost
+133	A D100	beat Boss Rush with The Lost
+134	Blue Map	donate 10 pennies to the shop
+135	There's Options	donate 50 pennies to the shop
+136	Black Candle	donate 150 pennies to the shop
+137	Red Candle	donate 400 pennies to the shop
+138	Stop Watch	donate 999 pennies to the shop
+139	Wire Coat Hanger	beat Mom's Heart 4 times
+140	Ipecac	beat Mom's Heart 6 times
+141	Experimental Treatment	beat Mom's Heart 7 times
+142	Krampus unlocked	take 20 items from devil rooms
+143	Head of Krampus	kill Krampus
+144	You made a Super Meat Boy	make a super meat boy
+145	Butter Bean	destroy 100 poops
+146	Little Baggy	collect 2 of either Roid Rage, The Virus, Growth Hormones, Experimental Treatment or Speed Ball
+147	Blood Bag	use the blood donation machine 30 times
+148	A D4	blow up 30 arcade machines
+149	The Lost Poster	beat Dark Room with Isaac
+150	Rubber Cement	beat Mom's Heart 2 times
+151	Store Upgrade lv.1	donate 20 pennies to the shop
+152	Store Upgrade lv.2	donate 100 pennies to the shop
+153	Store Upgrade lv.3	donate 200 pennies to the shop
+154	Store Upgrade lv.4	donate 600 pennies to the shop
+155	You unlocked the Angel bosses	beat Chest or Dark Room
+156	Godhead	beat Satan, Isaac, Mom's Heart, ???, Lamb, and Boss Rush on hard mode with The Lost
+157	You unlocked Challenge #4 Darkness Falls	
+158	You unlocked Challenge #5 The Tank	
+159	You unlocked Challenge #6 Solar System	
+160	You unlocked Challenge #7 Suicide King	
+161	You unlocked Challenge #8 Cat got your Tongue	
+162	You unlocked Challenge #9 Demo Man	
+163	You unlocked Challenge #10 Cursed!	
+164	You unlocked Challenge #11 Glass Cannon	
+165	You unlocked Challenge #19 The Family Man	
+166	You unlocked Challenge #20 Purist	
+167	Lost Baby	beat Mom's Heart on hard mode with Isaac
+168	Cute Baby	beat Mom's Heart on hard mode with Maggy
+169	Crow Baby	beat Mom's Heart on hard mode with Eve
+170	Shadow Baby	beat Mom's Heart on hard mode with Judas
+171	Glass Baby	beat Mom's Heart on hard mode with Cain
+172	Wrapped Baby	beat Mom's Heart on hard mode with Lazarus
+173	Begotten Baby	beat Mom's Heart on hard mode with Azazel
+174	Dead Baby	beat Mom's Heart on hard mode with ???
+175	-0- Baby	beat Mom's Heart on hard mode with The Lost
+176	Glitch Baby	beat Mom's Heart on hard mode with Eden
+177	Fighting Baby	beat Mom's Heart on hard mode with Samson
+178	You became Lord of the Flies	become Lord of the Flies
+179	Fart Baby	beat Blue Womb with Isaac
+180	Purity	beat Blue Womb with Maggy
+181	D12	beat Blue Womb with Cain
+182	Betrayal	beat Blue Womb with Judas
+183	Fate's Reward	beat Blue Womb with ???
+184	Athame	beat Blue Womb with Eve
+185	Blind Rage	beat Blue Womb with Samson
+186	Maw of the Void	beat Blue Womb with Azazel
+187	Empty Vessel	beat Blue Womb with Lazarus
+188	Eden's Blessing	beat Blue Womb with Eden
+189	Sworn Protector	beat Blue Womb with The Lost
+190	Incubus	beat Blue Womb with Lilith
+191	A Penny!	beat Blue Womb with Keeper
+192	Lil' Chest	beat Greed Mode with Isaac
+193	Censer	beat Greed Mode with Maggy
+194	Evil Eye	beat Greed Mode with Cain
+195	My Shadow	beat Greed Mode with Judas
+196	Cracked Dice	beat Greed Mode with ???
+197	Black Feather	beat Greed Mode with Eve
+198	Lusty Blood	beat Greed Mode with Samson
+199	Lilith	beat Greed Mode with Azazel
+200	Key Bum	beat Greed Mode with Lazarus
+201	GB Bug	beat Greed Mode with Eden
+202	Zodiac	beat Greed Mode with The Lost
+203	Box of Friends	beat Greed Mode with Lilith
+204	Rib of Greed	beat Greed Mode with Keeper
+205	Cry Baby	beat Mega Satan with Isaac
+206	Red Baby	beat Mega Satan with Maggy
+207	Green Baby	beat Mega Satan with Cain
+208	Brown Baby	beat Mega Satan with Judas
+209	Blue Baby	beat Mega Satan with ???
+210	Lil' Baby	beat Mega Satan with Eve
+211	Rage Baby	beat Mega Satan with Samson
+212	Black Baby	beat Mega Satan with Azazel
+213	Long Baby	beat Mega Satan with Lazarus
+214	Yellow Baby	beat Mega Satan with Eden
+215	White Baby	beat Mega Satan with The Lost
+216	Big Baby	beat Mega Satan with Lilith
+217	Noose Baby	beat Mega Satan with Keeper
+218	Rune Bag	beat Isaac with Lilith
+219	Cambion Conception	beat ??? with Lilith
+220	Serpent's Kiss	beat Satan with Lilith
+221	Succubus	beat The Lamb with Lilith
+222	Immaculate Conception	beat Boss Rush with lilith
+223	Goat Head Baby	beat Mom's Heart with Lilith on hard mode
+224	Gold Heart	beat Challenge 21 (XXXXXXXXL)
+225	Get out of Jail Free Card has appeared in the basement	beat Challenge 22 (Speed)
+226	Gold Bomb	beat Challenge 23 (Blue Bomber)
+227	2 new pills have appeared	beat Challenge 24 (Pay to Play) unlocks Percs/Overdose
+228	2 new pills have appeared	beat Challenge 25 (Have a Heart) unlocks Re-Lax/???
+229	Poker Chip	beat Challenge 26 (I Rule)
+230	Stud Finder	beat Challenge 27 (Brains)
+231	D8	beat Challenge 28 (Pride Day)
+232	Kidney Stone	beat Challenge 29 (Onan's Streak)
+233	Blank Rune	beat Challenge 30 (Guardian Angel)
+234	You unlocked the Blue Womb!	beat Mom's Heart 10 times
+235	1001% (Nerd x 1000000)	unlock everything
+236	Wooden Nickel	beat Isaac with Keeper
+237	Store Key	beat Satan with Keeper
+238	Deep Pockets	beat ??? with Keeper
+239	Karma	beat The Lamb with Keeper
+240	Sticky Nickels have appeared in the basement	beat Boss Rush with Keeper
+241	Super Greed Baby	beat Mom's Heart with Keeper on hard mode
+242	Lucky Pennies have appeared in the basement	2 coins in Greed Donation Machine
+243	You unlocked Special Hanging Shopkeepers!	14 coins in Greed Donation Machine
+244	Wooden Nickel	33 coins in Greed Donation Machine
+245	Paperclip	68 coins in Greed Donation Machine
+246	Everything is terrible 2!!! Greed just got harder!	111 coins in Greed Donation Machine
+247	You unlocked Special Shopkeepers!	234 coins in Greed Donation Machine
+248	Razor Blade	439 coins in Greed Donation Machine
+249	Store Key	666 coins in Greed Donation Machine
+250	Holy Mantle	879 coins in Greed Donation Machine
+251	Keeper	1000 coins in Greed Donation Machine
+252	Hive Baby	reach all endings with ???
+253	Buddy Baby	reach all endings with Isaac
+254	Colorful Baby	reach all endings with Maggy
+255	Whore Baby	reach all endings with Eve
+256	Cracked Baby	reach all endings with Eden
+257	Dripping Baby	reach all endings with Lazarus
+258	Blinding Baby	reach all endings with The Lost
+259	Sucky Baby	reach all endings with Azazel
+260	Dark Baby	reach all endings with Lilith
+261	Picky Baby	reach all endings with Cain
+262	Revenge Baby	reach all endings with Samson
+263	Belial Baby	reach all endings with Judas
+264	Sale Baby	reach all endings with Keeper
+265	You unlocked Challenge #21 XXXXXXXXL	
+266	You unlocked Challenge #22 SPEED!	
+267	You unlocked Challenge #23 Blue Bomber	
+268	You unlocked Challenge #24 PAY TO PLAY	
+269	You unlocked Challenge #25 Have a heart	
+270	You unlocked Challenge #26 I RULE!	
+271	You unlocked Challenge #27 BRAINS!	
+272	You unlocked Challenge #28 PRIDE DAY!	
+273	You unlocked Challenge #29 Onan's Streak	
+274	You unlocked Challenge #30 The Guardian	
+275	If only everyone was as generous as you are...	
+276	Mega Blast	
+277	You unlocked Challenge #31 Backasswards	Afterbirth+
+278	You unlocked Challenge #32 Aprils fool	
+279	You unlocked Challenge #33 Pokey mans	
+280	You unlocked Challenge #34 Ultra hard	
+281	You unlocked Challenge #35 PONG	
+282	D infinity	
+283	Eucharist	
+284	Silver Dollar	
+285	Shade	
+286	King Baby	
+287	Bloody Crown	
+288	Dull Razor	
+289	Eden's Soul	
+290	Dark Prince's Crown	
+291	Compound Fracture	
+292	Euthanasia	
+293	Holy Card	
+294	Crooked Penny	
+295	Void	
+296	D1	
+297	Glyph of Balance	
+298	Sack of Sacks	
+299	Eye of Belial	
+300	Meconium	
+301	Stem Cell	
+302	Crow Heart	
+303	Metronome	
+304	Bat Wing	
+305	Plan C	
+306	Duality	
+307	Dad's Lost Coin	
+308	Eye of Greed	
+309	Black Rune	
+310	Locust of Wrath	
+311	Locust of Pestilence	
+312	Locust of Famine	
+313	Locust of Death	
+314	Locust of Conquest	
+315	Hushy	
+316	Brown Nugget	
+317	Mort Baby	
+318	Smelter	
+319	Apollyon Baby	
+320	You unlocked a new area!	
+321	Once more with feeling!	
+322	Hat trick!	
+323	5 nights at moms	
+324	Sin collector	
+325	Dedication	
+326	ZIP!	
+327	It's the key	
+328	Mr. Resetter!	
+329	Living on the edge	
+330	U broke it!	
+331	Laz Bleeds More!	
+332	Maggy now hold a pill!	
+333	Charged Key	
+334	Samson feels healthy!	
+335	Greed's Gullet	
+336	Cracked Crown	
+337	You unlocked RERUN!	
+338	Delirious	
+339	1000000% Just Stop!	
+340	Apollyon	kill Mega Satan
+341	You just got Greedier!	500 coins in Greed Donation Machine
+342	The Basement is burning!	beat Mom's Heart 11 times
+343	The Caves are flooded!	beat Mom's Heart 16 times
+344	The Depths are dank!	beat Mom's Heart 21 times
+345	The Womb is scarred!	beat Mom's Heart 30 times
+346	Something wicked this way comes!	beat Chest as 3 different characters
+347	Something wicked this way comes+!	beat Chest as 6 different characters
+348	The gate is open!	kill the Lamb
+349	Black Hole	Afterbirth+ Booster #1
+350	Mystery Gift	
+351	Sprinkler	
+352	Angry Fly	
+353	Bozo	
+354	Broken Modem	
+355	Buddy in a Box	
+356	Fast Bombs	
+357	Lil Delirium	
+358	Hairpin	
+359	Wooden Cross	
+360	Butter	
+361	Huge Growth	
+362	Ancient Recall	
+363	Era Walk	
+364	Coupon	Afterbirth+ Booster #2
+365	Telekinesis	
+366	Moving Box	
+367	Jumper Cables	
+368	Leprosy	
+369	Technology Zero	
+370	Filigree Feather	
+371	Mr. Me	Afterbirth+ Booster #3
+372	7 Seals	
+373	Angelic Prism	
+374	Pop!	
+375	Door Stop	
+376	Death's List	Afterbirth+ Booster #4
+377	Haemolacria	
+378	Lachryphagy	
+379	Schoolbag	
+380	Trisagion	
+381	Extension Cord	
+382	Flat Stone	Afterbirth+ Booster #5
+383	Sacrificial Altar	
+384	Lil Spewer	
+385	Blanket	
+386	Marbles	
+387	Mystery Egg	
+388	Rotten Penny	
+389	Baby-Bender	
+390	The Forgotten	it's a secret...
+391	Bone Heart	
+392	Marrow	beat Mom's Heart on hard mode with The Forgotten
+393	Slipped Rib	kill Isaac with The Forgotten
+394	Pointy Rib	kill Satan with The Forgotten
+395	Jaw Bone	beat The Chest with The Forgotten
+396	Brittle Bones	beat Dark Room with The Forgotten
+397	Divorce Papers	beat Boss Rush with The Forgotten
+398	Hallowed Ground	beat Blue Womb with The Forgotten
+399	Finger Bone	beat Greed Mode with The Forgotten
+400	Dad's Ring	beat Greedier Mode with The Forgotten
+401	Book of the Dead	beat The Void with The Forgotten
+402	Bone Baby	reach all endings with The Forgotten
+403	Bound Baby	beat Mega Satan with The Forgotten

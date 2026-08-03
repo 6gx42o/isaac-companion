@@ -69,8 +69,62 @@ def main():
         ]))
     (HERE / "src/characters.tsv").write_text("\n".join(crows) + "\n")
 
+    # ---- the browser's tables -------------------------------------------------
+    #
+    # Names, ids, kinds, pools and stat numbers only. Deliberately NOT the
+    # descriptions: those are the External Item Descriptions mod's text, which ships
+    # without a licence and is not ours to bake into a binary we hand out. The Windows
+    # browser reads them from the user's own EID install if it is there, exactly as the
+    # Mac app does, and shows names and numbers when it is not.
+    #
+    # Sprites are the same story for a different reason -- they are Nicalis's art -- so
+    # they are read from the user's own game install and never redistributed.
+    brows = ["\t".join(["id", "kind", "name", "pools", "cache", "special", "gfx"])]
+    for item in data["items"]:
+        brows.append("\t".join([
+            str(item["id"]),
+            item.get("kind") or "passive",
+            item["name"].replace("\t", " "),
+            ",".join(item.get("pools") or []),
+            ",".join(item.get("cache") or []),
+            "1" if item.get("special") else "",
+            item.get("gfx") or "",
+        ]))
+    (HERE / "src/browse.tsv").write_text("\n".join(brows) + "\n")
+
+    erows = ["\t".join(["type", "variant", "name", "hp", "boss"])]
+    for e in data.get("entities", []):
+        if not e.get("name"):
+            continue
+        erows.append("\t".join([
+            str(e.get("type", 0)), str(e.get("variant", 0)),
+            e["name"].replace("\t", " "),
+            cell(e.get("baseHP")),
+            "1" if e.get("isBoss") else "",
+        ]))
+    (HERE / "src/enemies.tsv").write_text("\n".join(erows) + "\n")
+
+    arows = ["\t".join(["id", "name", "condition"])]
+    for a in data.get("achievements", []):
+        # The game's own achievements.xml, same class of data as the item names above.
+        # The announcement is a sentence, not a name: `You unlocked "Magdalene"` and
+        # `"A Bag of Pennies" has appeared in the basement`. The name is what sits
+        # between the first and last quote -- the same rule AppModel.tidy uses, so both
+        # builds label an achievement identically.
+        ann = a.get("announcement") or ""
+        first, last = ann.find('"'), ann.rfind('"')
+        name = ann[first + 1:last] if 0 <= first < last else ann
+        arows.append("\t".join([
+            str(a["id"]), name.replace("\t", " "),
+            (a.get("condition") or "").replace("\t", " "),
+        ]))
+    (HERE / "src/achievements.tsv").write_text("\n".join(arows) + "\n")
+
     print(f"items.tsv:      {len(rows) - 1} collectibles")
     print(f"characters.tsv: {len(crows) - 1} characters")
+    print(f"browse.tsv:     {len(brows) - 1} items")
+    print(f"enemies.tsv:    {len(erows) - 1} entities")
+    print(f"achievements.tsv: {len(arows) - 1} achievements")
 
 
 if __name__ == "__main__":

@@ -16,7 +16,12 @@ use std::sync::{Arc, Mutex};
 
 /// Binds the first free port, preferring the one the macOS build's dev server uses so
 /// the URL is familiar, and returns it.
-pub fn serve(state: Arc<Mutex<State>>, data: Arc<Data>, running: Arc<AtomicBool>) -> u16 {
+pub fn serve(
+    state: Arc<Mutex<State>>,
+    data: Arc<Data>,
+    running: Arc<AtomicBool>,
+    catalogue: Arc<crate::browse::Catalogue>,
+) -> u16 {
     // ISAAC_PORT pins the port. Only the test harness sets it: everything else wants
     // the "first one that is free" behaviour below, because two copies of this on one
     // machine should not fight over a number.
@@ -52,10 +57,11 @@ pub fn serve(state: Arc<Mutex<State>>, data: Arc<Data>, running: Arc<AtomicBool>
             let data = Arc::clone(&data);
             let running = Arc::clone(&running);
             let cache = Arc::clone(&cache);
+            let catalogue = Arc::clone(&catalogue);
             // A thread per connection. The only client is one browser tab polling a
             // few times a second, so a pool would be machinery for no one.
             std::thread::spawn(move || {
-                let _ = handle(stream, state, data, running, cache);
+                let _ = handle(stream, state, data, running, cache, catalogue);
             });
         }
     });
@@ -70,6 +76,7 @@ fn handle(
     data: Arc<Data>,
     running: Arc<AtomicBool>,
     cache: Cache,
+    catalogue: Arc<crate::browse::Catalogue>,
 ) -> std::io::Result<()> {
     let mut reader = BufReader::new(stream.try_clone()?);
     let mut request = String::new();
@@ -80,12 +87,53 @@ fn handle(
         line.clear();
     }
 
-    let path = request.split_whitespace().nth(1).unwrap_or("/");
-    let (status, ctype, body) = match path {
+    let target = request.split_whitespace().nth(1).unwrap_or("/").to_string();
+    let (path, query) = match target.split_once('?') {
+        Some((p, q)) => (p.to_string(), q.to_string()),
+        None => (target.clone(), String::new()),
+    };
+
+    // Sprites are the one binary response, and they are read from the user's own game
+    // install rather than shipped -- see browse.rs. Cached hard, because the art for a
+    // given item never changes and the browser asks for hundreds of them.
+    if let Some(name) = path.strip_prefix("/sprite/") {
+        return match catalogue.sprite(&percent_decode(name)) {
+            Some(bytes) => {
+                let head = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {}\r\n\
+                     Cache-Control: max-age=86400\r\nConnection: close\r\n\r\n",
+                    bytes.len()
+                );
+                stream.write_all(head.as_bytes())?;
+                stream.write_all(&bytes)?;
+                stream.flush()
+            }
+            None => {
+                let head = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\
+                            Connection: close\r\n\r\n";
+                stream.write_all(head.as_bytes())?;
+                stream.flush()
+            }
+        };
+    }
+
+    let q = param(&query, "q");
+    let (status, ctype, body) = match path.as_str() {
         "/api/state" => (
             "200 OK",
             "application/json; charset=utf-8",
             cached_state(&state, &data, &running, &cache),
+        ),
+        "/api/items" => ("200 OK", "application/json; charset=utf-8", items_json(&catalogue, &q)),
+        "/api/enemies" => (
+            "200 OK",
+            "application/json; charset=utf-8",
+            enemies_json(&catalogue, &q),
+        ),
+        "/api/achievements" => (
+            "200 OK",
+            "application/json; charset=utf-8",
+            achievements_json(&catalogue, &q),
         ),
         "/" | "/index.html" => ("200 OK", "text/html; charset=utf-8", crate::ui::PAGE.to_string()),
         _ => ("404 Not Found", "text/plain; charset=utf-8", "not found".to_string()),
@@ -200,9 +248,215 @@ fn state_json(state: &Arc<Mutex<State>>, data: &Data, is_running: bool) -> Strin
     )
 }
 
+
+// ---- browse endpoints -------------------------------------------------------
+
+/// One query parameter, percent-decoded. No general parser: there is exactly one
+/// parameter in this whole server and it is a search box.
+fn param(query: &str, key: &str) -> String {
+    for pair in query.split('&') {
+        if let Some(v) = pair.strip_prefix(&format!("{key}=")) {
+            return percent_decode(v);
+        }
+    }
+    String::new()
+}
+
+/// Enough percent-decoding for a search box: %XX and '+' for space. Invalid escapes are
+/// left alone rather than dropped, so a stray '%' someone typed still searches for '%'.
+fn percent_decode(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'+' => {
+                out.push(b' ');
+                i += 1;
+            }
+            b'%' if i + 2 < bytes.len() => {
+                let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or("");
+                match u8::from_str_radix(hex, 16) {
+                    Ok(b) => {
+                        out.push(b);
+                        i += 3;
+                    }
+                    Err(_) => {
+                        out.push(bytes[i]);
+                        i += 1;
+                    }
+                }
+            }
+            b => {
+                out.push(b);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// How many rows one search returns. The browser renders them all, and past a few
+/// hundred the list stops being something a person reads.
+const SEARCH_LIMIT: usize = 300;
+
+fn items_json(cat: &crate::browse::Catalogue, q: &str) -> String {
+    let mut out = String::from("{\"items\":[");
+    for (i, e) in cat.search_items(q, SEARCH_LIMIT).iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        out.push_str(&format!(
+            "{{\"id\":{},\"name\":\"{}\",\"kind\":\"{}\",\"special\":{},\
+             \"gfx\":\"{}\",\"pools\":[{}],\"cache\":[{}]}}",
+            e.id,
+            esc(&e.name),
+            esc(&e.kind),
+            e.special,
+            esc(&e.gfx),
+            e.pools.iter().map(|p| format!("\"{}\"", esc(p))).collect::<Vec<_>>().join(","),
+            e.cache.iter().map(|c| format!("\"{}\"", esc(c))).collect::<Vec<_>>().join(","),
+        ));
+    }
+    out.push_str(&format!("],\"total\":{},\"art\":{}}}", cat.items.len(), cat.sprite_dir.is_some()));
+    out
+}
+
+fn enemies_json(cat: &crate::browse::Catalogue, q: &str) -> String {
+    let mut out = String::from("{\"enemies\":[");
+    for (i, e) in cat.search_enemies(q, SEARCH_LIMIT).iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        let hp = match e.hp {
+            Some(h) => format!("{h}"),
+            None => "null".to_string(),
+        };
+        out.push_str(&format!(
+            "{{\"type\":{},\"variant\":{},\"name\":\"{}\",\"hp\":{},\"boss\":{}}}",
+            e.kind,
+            e.variant,
+            esc(&e.name),
+            hp,
+            e.boss
+        ));
+    }
+    out.push_str(&format!("],\"total\":{}}}", cat.enemies.len()));
+    out
+}
+
+fn achievements_json(cat: &crate::browse::Catalogue, q: &str) -> String {
+    let mut out = String::from("{\"achievements\":[");
+    for (i, a) in cat.search_achievements(q, SEARCH_LIMIT).iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        out.push_str(&format!(
+            "{{\"id\":{},\"name\":\"{}\",\"condition\":\"{}\"}}",
+            a.id,
+            esc(&a.name),
+            esc(&a.condition)
+        ));
+    }
+    out.push_str(&format!("],\"total\":{}}}", cat.achievements.len()));
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ---- the HTTP layer itself ---------------------------------------------
+    //
+    // None of this was covered before: `handle` had never been run over a real socket,
+    // so the request line parsing, the header drain, the 404 path and the sprite route
+    // were all assumed rather than known.
+
+    use std::io::{BufRead, BufReader as TestReader, Write as TestWrite};
+    use std::net::TcpStream as TestStream;
+
+    fn spin_up() -> u16 {
+        let state = Arc::new(Mutex::new(State {
+            run: crate::run::Run::default(),
+            log_path: None,
+            attached: false,
+            version: 0,
+        }));
+        let data = Arc::new(crate::run::Data::load());
+        let running = Arc::new(AtomicBool::new(false));
+        let catalogue = Arc::new(crate::browse::Catalogue::load());
+        // Port 0: let the OS pick, so parallel tests cannot collide.
+        std::env::set_var("ISAAC_PORT", "0");
+        let port = serve(state, data, running, catalogue);
+        std::env::remove_var("ISAAC_PORT");
+        port
+    }
+
+    fn get(port: u16, path: &str) -> (String, String) {
+        let mut stream = TestStream::connect(("127.0.0.1", port)).expect("connect");
+        write!(stream, "GET {path} HTTP/1.1\r\nHost: localhost\r\n\r\n").unwrap();
+        stream.flush().unwrap();
+        let mut reader = TestReader::new(stream);
+        let mut status = String::new();
+        reader.read_line(&mut status).unwrap();
+        let mut line = String::new();
+        while reader.read_line(&mut line).unwrap() > 0 && line.trim() != "" {
+            line.clear();
+        }
+        let mut body = String::new();
+        use std::io::Read;
+        reader.read_to_string(&mut body).ok();
+        (status.trim().to_string(), body)
+    }
+
+    #[test]
+    fn serves_the_page_the_state_and_the_catalogue() {
+        let port = spin_up();
+
+        let (status, body) = get(port, "/");
+        assert!(status.contains("200"), "GET / -> {status}");
+        assert!(body.contains("Isaac Companion"));
+
+        let (status, body) = get(port, "/api/state");
+        assert!(status.contains("200"));
+        assert!(body.contains("\"character\""));
+
+        let (status, body) = get(port, "/api/items?q=brimstone");
+        assert!(status.contains("200"));
+        assert!(body.contains("Brimstone"), "{body}");
+        // Balanced braces is a weak check on its own, so also assert the shape.
+        assert!(body.starts_with("{\"items\":["));
+        assert!(body.contains("\"total\":"));
+
+        let (_, body) = get(port, "/api/enemies?q=monstro");
+        assert!(body.contains("Monstro"));
+
+        let (_, body) = get(port, "/api/achievements?q=pennies");
+        assert!(body.contains("Pennies"));
+    }
+
+    #[test]
+    fn an_unknown_path_is_a_404_and_a_bad_sprite_is_too() {
+        let port = spin_up();
+        let (status, _) = get(port, "/nope");
+        assert!(status.contains("404"), "{status}");
+        // Traversal is refused at the HTTP layer as well as in browse.rs.
+        let (status, _) = get(port, "/sprite/../../etc/passwd");
+        assert!(status.contains("404"), "{status}");
+    }
+
+    #[test]
+    fn query_parameters_survive_the_trip() {
+        assert_eq!(param("q=brim", "q"), "brim");
+        assert_eq!(param("q=mom%27s+knife", "q"), "mom's knife");
+        assert_eq!(param("other=1&q=cain", "q"), "cain");
+        assert_eq!(param("", "q"), "");
+        // A stray percent is what someone typed, not an error to swallow.
+        assert_eq!(percent_decode("100%"), "100%");
+        assert_eq!(percent_decode("%zz"), "%zz");
+        assert_eq!(percent_decode("caf%C3%A9"), "café");
+    }
+
 
     #[test]
     fn escapes_what_would_otherwise_break_the_payload() {

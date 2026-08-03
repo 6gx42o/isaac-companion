@@ -1,0 +1,776 @@
+id	kind	name	pools	cache	special	gfx
+1	passive	The Sad Onion	treasure,greedTreasure	firedelay		Collectibles_001_TheSadOnion.png
+2	passive	The Inner Eye	treasure,greedTreasure	damage,firedelay		Collectibles_002_TheInnerEye.png
+3	passive	Spoon Bender	treasure,greedTreasure	speed,tearcolor,tearflag		Collectibles_003_SpoonBender.png
+4	passive	Cricket's Head	treasure,goldenChest,greedTreasure,greedGoldenChest	damage,shotspeed		Collectibles_004_CricketsHead.png
+5	passive	My Reflection	treasure,greedTreasure	range,shotspeed,tearflag		Collectibles_005_MyReflection.png
+6	passive	Number One	treasure,greedTreasure	firedelay,range,tearcolor		Collectibles_006_NumberOne.png
+7	passive	Blood of the Martyr	treasure,greedTreasure,greedAngel	damage		Collectibles_007_BloodOfTheMartyr.png
+8	familiar	Brother Bobby	treasure,devil,greedTreasure			Collectibles_008_BrotherBobby.png
+9	passive	Skatole				Collectibles_009_Skatole.png
+10	familiar	Halo of Flies	treasure,keyMaster,greedTreasure			Collectibles_010_HaloOfFlies.png
+11	familiar	1up!	secret,greedBoss			Collectibles_011_1Up.png
+12	passive	Magic Mushroom	treasure,boss,greedTreasure	damage,range,speed		Collectibles_012_MagicMushroom.png
+13	passive	The Virus	treasure,demonBeggar,greedTreasure	speed		Collectibles_013_TheVirus.png
+14	passive	Roid Rage	treasure,boss,demonBeggar,greedBoss	range,speed		Collectibles_014_RoidRage.png
+15	passive	<3	treasure,boss,greedBoss			Collectibles_015_Heart.png
+16	passive	Raw Liver	secret,greedBoss			Collectibles_016_RawLiver.png
+17	passive	Skeleton Key	secret			Collectibles_017_SkeletonKey.png
+18	passive	A Dollar				Collectibles_018_ADollar.png
+19	passive	Boom!	treasure,challenge,bossrush,bombBum			Collectibles_019_Boom.png
+20	passive	Transcendence	secret	flying		Collectibles_020_Transcendence.png
+21	passive	The Compass	shop,beggar			Collectibles_021_TheCompass.png
+22	passive	Lunch	boss,beggar,dungeon,greedBoss			Collectibles_022_Lunch.png
+23	passive	Dinner	boss,beggar,dungeon,greedBoss			Collectibles_023_Dinner.png
+24	passive	Dessert	boss,beggar,dungeon,greedBoss			Collectibles_024_Dessert.png
+25	passive	Breakfast	boss,beggar,dungeon,greedBoss			Collectibles_025_Breakfast.png
+26	passive	Rotten Meat	boss,beggar,dungeon,greedBoss			Collectibles_026_RottenMeat.png
+27	passive	Wooden Spoon	boss,greedBoss	speed		Collectibles_027_WoodenSpoon.png
+28	passive	The Belt	boss,greedBoss	speed		Collectibles_028_TheBelt.png
+29	passive	Mom's Underwear	boss,dungeon,greedBoss	range		Collectibles_029_MomsUnderwear.png
+30	passive	Mom's Heels	boss,dungeon,greedBoss	range		Collectibles_030_MomsHeels.png
+31	passive	Mom's Lipstick	boss,dungeon,greedBoss	range		Collectibles_031_MomsLipstick.png
+32	passive	Wire Coat Hanger	boss,greedBoss	firedelay		Collectibles_032_WireCoatHanger.png
+33	active	The Bible	shop,angel,library	flying		Collectibles_033_TheBible.png
+34	active	The Book of Belial	devil,library,greedTreasure,greedDevil,greedLibrary	damage		Collectibles_034_TheBookOfBelial.png
+35	active	The Necronomicon	devil,secret,library,greedTreasure,greedDevil,greedLibrary			Collectibles_035_TheNecronomicon.png
+36	active	The Poop	treasure			Collectibles_036_ThePoop.png
+37	active	Mr. Boom	treasure,challenge,bossrush,greedTreasure,bombBum			Collectibles_037_MrBoom.png
+38	active	Tammy's Head	goldenChest,greedTreasure,greedGoldenChest			Collectibles_038_TammysHead.png
+39	active	Mom's Bra	treasure,dungeon			Collectibles_039_MomsBra.png
+40	active	Kamikaze!	treasure			Collectibles_040_Kamikaze.png
+41	active	Mom's Pad	treasure,dungeon			Collectibles_041_MomsPad.png
+42	active	Bob's Rotten Head	treasure,goldenChest,greedTreasure,greedGoldenChest			Collectibles_042_BobsRottenHead.png
+44	active	Teleport!	treasure			Collectibles_044_Teleport.png
+45	active	Yum Heart	treasure,greedTreasure			Collectibles_045_YumHeart.png
+46	passive	Lucky Foot	treasure,beggar,greedShop	luck		Collectibles_046_LuckyFoot.png
+47	active	Doctor's Remote	treasure,greedTreasure			Collectibles_047_DoctorsRemote.png
+48	passive	Cupid's Arrow	treasure,greedTreasure	tearflag		Collectibles_048_CupidsArrow.png
+49	active	Shoop da Whoop!	treasure			Collectibles_049_ShoopDaWhoop.png
+50	passive	Steven	goldenChest,greedTreasure,greedGoldenChest	damage		Collectibles_050_Steven.png
+51	passive	Pentagram	boss,devil,curse,greedDevil	damage		Collectibles_051_Pentagram.png
+52	passive	Dr. Fetus	treasure,greedTreasure	damage,firedelay,luck,range,shotspeed,speed	1	Collectibles_052_DrFetus.png
+53	passive	Magneto	treasure			Collectibles_053_Magneto.png
+54	passive	Treasure Map	shop,beggar			Collectibles_054_TreasureMap.png
+55	passive	Mom's Eye	treasure,dungeon,greedTreasure			Collectibles_055_MomsEye.png
+56	active	Lemon Mishap	treasure,greedTreasure			Collectibles_056_LemonMishap.png
+57	familiar	Distant Admiration	treasure,keyMaster,greedTreasure			Collectibles_057_DistantAdmiration.png
+58	active	Book of Shadows	treasure,library,greedLibrary			Collectibles_058_BookOfShadows.png
+60	passive	The Ladder	shop	tearflag		Collectibles_060_TheLadder.png
+62	passive	Charm of the Vampire	treasure,greedTreasure			Collectibles_062_CharmOfTheVampire.png
+63	passive	The Battery	shop,greedShop			Collectibles_063_TheBattery.png
+64	passive	Steam Sale	shop,greedTreasure			Collectibles_064_SteamSale.png
+65	active	Anarchist Cookbook	treasure,library,greedTreasure,greedLibrary			Collectibles_065_AnarchistCookbook.png
+66	active	The Hourglass	treasure			Collectibles_066_TheHourglass.png
+67	familiar	Sister Maggy	treasure,devil,greedTreasure,greedDevil			Collectibles_067_SisterMaggy.png
+68	passive	Technology	treasure,greedTreasure	damage,firedelay,luck,range,shotspeed,speed		Collectibles_068_Technology.png
+69	passive	Chocolate Milk	treasure,greedTreasure	damage,firedelay,luck,range,shotspeed,speed		Collectibles_069_ChocolateMilk.png
+70	passive	Growth Hormones	boss,demonBeggar,greedBoss	damage,speed		Collectibles_070_GrowthHormones.png
+71	passive	Mini Mush	treasure,greedBoss	range,speed		Collectibles_071_MiniMushroom.png
+72	passive	Rosary	treasure,angel,greedAngel			Collectibles_072_Rosary.png
+73	familiar	Cube of Meat	greedTreasure,greedBoss,greedShop,greedCurse,greedDevil,greedAngel,greedSecret			Collectibles_073_CubeOfMeat.png
+74	passive	A Quarter	treasure,secret			Collectibles_074_AQuarter.png
+75	passive	PHD	treasure,shop,greedShop			Collectibles_075_PHD.png
+76	passive	X-Ray Vision	treasure,greedShop			Collectibles_076_XrayVision.png
+77	active	My Little Unicorn	treasure,greedTreasure	speed		Collectibles_077_MyLittleUnicorn.png
+78	active	Book of Revelations	treasure,library,greedTreasure,greedAngel,greedLibrary			Collectibles_078_BookOfRevelations.png
+79	passive	The Mark	devil,curse,greedDevil	damage,speed		Collectibles_079_TheMark.png
+80	passive	The Pact	devil,curse,greedDevil	damage,firedelay		Collectibles_080_ThePact.png
+81	familiar	Dead Cat	devil,redChest,curse,greedCurse,greedDevil			Collectibles_081_DeadCat.png
+82	passive	Lord of the Pit	devil,greedDevil	flying,speed		Collectibles_082_LordOfThePit.png
+83	active	The Nail	devil,greedDevil	damage,speed		Collectibles_083_TheNail.png
+84	active	We Need To Go Deeper!	devil,secret,greedShop			Collectibles_084_WeNeedToGoDeeper.png
+85	active	Deck of Cards	treasure,shop,greedTreasure			Collectibles_085_DeckOfCards.png
+86	active	Monstro's Tooth	treasure			Collectibles_086_MonstrosTooth.png
+87	passive	Loki's Horns	treasure,greedTreasure			Collectibles_087_LokisHorns.png
+88	familiar	Little Chubby	treasure,greedTreasure			Collectibles_088_LittleChubby.png
+89	passive	Spider Bite	treasure,greedTreasure	tearcolor,tearflag		Collectibles_089_SpidersBite.png
+90	passive	The Small Rock		damage,firedelay,speed,tearcolor		Collectibles_090_SmallRock.png
+91	passive	Spelunker Hat	treasure,greedShop			Collectibles_091_SpelunkerHat.png
+92	passive	Super Bandage	treasure,boss			Collectibles_092_SuperBandage.png
+93	active	The Gamekid	treasure,greedTreasure			Collectibles_093_TheGameKid.png
+94	familiar	Sack of Pennies	treasure,secret,goldenChest,greedTreasure			Collectibles_094_SackOfPennies.png
+95	familiar	Robo-Baby	treasure,greedTreasure			Collectibles_095_RoboBaby.png
+96	familiar	Little C.H.A.D.	treasure,greedTreasure			Collectibles_096_LittleChad.png
+97	active	The Book of Sin	treasure,devil,library,greedTreasure,greedDevil,greedLibrary			Collectibles_097_BookOfSin.png
+98	familiar	The Relic	treasure,angel,greedTreasure			Collectibles_098_TheRelic.png
+99	familiar	Little Gish	treasure,greedTreasure			Collectibles_099_LittleGish.png
+100	familiar	Little Steven	treasure,boss,greedTreasure			Collectibles_100_LittleSteve.png
+101	passive	The Halo	treasure,boss,angel,greedTreasure,greedBoss	damage,firedelay,range,speed		Collectibles_101_TheHalo.png
+102	active	Mom's Bottle of Pills	treasure,shop,beggar,demonBeggar,dungeon,greedTreasure			Collectibles_102_MomsBottleOfPills.png
+103	passive	The Common Cold	treasure,greedTreasure	tearcolor,tearflag		Collectibles_103_TheCommonCold.png
+104	passive	The Parasite	treasure,greedTreasure	tearcolor,tearflag		Collectibles_104_TheParasite.png
+105	active	The D6	treasure,greedShop		1	Collectibles_105_Dice.png
+106	passive	Mr. Mega	treasure,secret,challenge,bossrush,greedTreasure			Collectibles_106_MrMega.png
+107	active	The Pinking Shears	treasure,greedTreasure	familiars		Collectibles_107_PinkingShears.png
+108	passive	The Wafer	treasure,angel,greedTreasure			Collectibles_108_TheWafer.png
+109	passive	Money = Power	treasure	damage		Collectibles_109_MoneyisPower.png
+110	passive	Mom's Contacts	treasure,dungeon,greedTreasure	range,tearcolor,tearflag		Collectibles_110_MomsContacts.png
+111	active	The Bean	treasure,beggar,greedTreasure			Collectibles_111_TheBean.png
+112	familiar	Guardian Angel	angel,greedAngel			Collectibles_112_GuardianAngel.png
+113	familiar	Demon Baby	treasure,devil,demonBeggar,greedDevil			Collectibles_113_DemonBaby.png
+114	passive	Mom's Knife	treasure,devil,dungeon,greedTreasure,greedDevil	damage,firedelay,luck,range,shotspeed,speed	1	Collectibles_114_MomsKnife.png
+115	passive	Ouija Board	treasure,greedTreasure,greedDevil	tearcolor,tearflag		Collectibles_115_OuijaBoard.png
+116	passive	9 Volt	shop,greedShop			Collectibles_116_9Volt.png
+117	passive	Dead Bird	treasure,greedTreasure,greedDevil	familiars		Collectibles_117_DeadBird.png
+118	passive	Brimstone	devil	damage,firedelay,luck,range,shotspeed,speed	1	Collectibles_118_Brimstone.png
+119	passive	Blood Bag	goldenChest	speed		Collectibles_119_BloodBag.png
+120	passive	Odd Mushroom (Thin)	treasure,secret,greedTreasure,greedBoss	damage,firedelay,speed		Collectibles_120_OddMushroomThin.png
+121	passive	Odd Mushroom (Large)	treasure,secret	damage,range,speed		Collectibles_121_OddMushroomLarge.png
+122	passive	Whore of Babylon	devil,greedDevil	damage,speed		Collectibles_122_WhoreOFBabylon.png
+123	active	Monster Manual	treasure,greedLibrary			Collectibles_123_MonsterManual.png
+124	active	Dead Sea Scrolls	treasure,angel,greedTreasure			Collectibles_124_DeadSeaScrolls.png
+125	passive	Bobby-Bomb	treasure,challenge,bossrush,greedTreasure,bombBum			Collectibles_125_BobbyBomb.png
+126	active	Razor Blade	devil	damage		Collectibles_126_RazorBlade.png
+127	active	Forget Me Now	treasure,secret			Collectibles_127_ForgetMeNow.png
+128	familiar	Forever Alone	treasure,keyMaster,greedTreasure			Collectibles_128_ForeverAlone.png
+129	passive	Bucket of Lard	treasure	speed		Collectibles_129_BucketofLard.png
+130	active	A Pony		flying,speed		Collectibles_130_APony.png
+131	familiar	Bomb Bag	treasure,secret,challenge,goldenChest,bossrush,greedTreasure,bombBum			Collectibles_131_BombBag.png
+132	passive	A Lump of Coal	greedTreasure,greedBoss,greedDevil	damage,tearcolor,tearflag		Collectibles_132_ALumpOfCoal.png
+133	active	Guppy's Paw	devil,redChest,curse,greedCurse,greedDevil			Collectibles_133_GuppysPaw.png
+134	passive	Guppy's Tail	devil,redChest,curse,greedCurse,greedDevil			Collectibles_134_GuppysTail.png
+135	active	IV Bag	goldenChest			Collectibles_135_IVBag.png
+136	active	Best Friend	treasure			Collectibles_136_BestFriend.png
+137	active	Remote Detonator	treasure,shop,challenge,bossrush,greedTreasure			Collectibles_137_RemoteDetonator.png
+138	passive	Stigmata	treasure,greedTreasure,greedAngel	damage		Collectibles_138_Stigmata.png
+139	passive	Mom's Purse	shop,dungeon,greedShop			Collectibles_139_MomsPurse.png
+140	passive	Bob's Curse	treasure,challenge,redChest,bossrush,greedTreasure,bombBum			Collectibles_140_BobsCurse.png
+141	passive	Pageant Boy	boss			Collectibles_141_PageantBoy.png
+142	passive	Scapular	treasure,angel,greedTreasure			Collectibles_142_Scapular.png
+143	passive	Speed Ball	treasure,boss,demonBeggar,greedBoss	shotspeed,speed		Collectibles_143_Speedball.png
+144	familiar	Bum Friend	treasure,beggar			Collectibles_144_BumFriend.png
+145	active	Guppy's Head	devil,goldenChest,redChest,curse,greedCurse,greedDevil,greedGoldenChest			Collectibles_145_GuppysHead.png
+146	active	Prayer Card	treasure,angel,greedTreasure			Collectibles_146_PrayerCard.png
+147	active	Notched Axe	treasure			Collectibles_147_NotchedAxe.png
+148	passive	Infestation	treasure,greedTreasure			Collectibles_148_Infestation.png
+149	passive	Ipecac	treasure,greedTreasure	damage,firedelay,luck,range,shotspeed,speed		Collectibles_149_Ipecac.png
+150	passive	Tough Love	treasure,greedTreasure			Collectibles_150_ToughLove.png
+151	passive	The Mulligan	treasure,greedTreasure	tearflag		Collectibles_151_TheMulligan.png
+152	passive	Technology 2	treasure,greedTreasure	damage,weapon		Collectibles_152_Technology2.png
+153	passive	Mutant Spider	treasure,greedTreasure	damage,firedelay	1	Collectibles_153_MutantSpider.png
+154	passive	Chemical Peel	treasure,greedTreasure	damage		Collectibles_154_ChemicalPeel.png
+155	familiar	The Peeper	treasure,greedTreasure			Collectibles_155_ThePeeper.png
+156	passive	Habit	shop,angel,greedShop			Collectibles_156_Habit.png
+157	passive	Bloody Lust	treasure,greedTreasure	damage		Collectibles_157_BloodyLust.png
+158	active	Crystal Ball	treasure			Collectibles_158_CrystalBall.png
+159	passive	Spirit of the Night	devil,greedDevil	flying,tearcolor,tearflag		Collectibles_159_SpiritOfTheNight.png
+160	active	Crack the Sky	treasure			Collectibles_160_CrackTheSky.png
+161	passive	Ankh	treasure,greedTreasure			Collectibles_161_Ankh.png
+162	passive	Celtic Cross	treasure,angel,greedTreasure,greedAngel			Collectibles_162_CelticCross.png
+163	familiar	Ghost Baby	treasure,devil,greedTreasure			Collectibles_163_GhostBaby.png
+164	active	The Candle	shop			Collectibles_164_BlueCandle.png
+165	passive	Cat-o-nine-tails	boss	damage,shotspeed		Collectibles_165_CatONineTails.png
+166	active	D20	treasure,greedShop			Collectibles_166_D20.png
+167	familiar	Harlequin Baby	treasure,greedTreasure			Collectibles_167_HarlequinBaby.png
+168	passive	Epic Fetus	treasure,greedTreasure	damage,firedelay,luck,range,shotspeed,speed	1	Collectibles_168_EpicFetus.png
+169	passive	Polyphemus	treasure,greedTreasure	damage,firedelay,tearflag	1	Collectibles_169_Polyphemus.png
+170	familiar	Daddy Longlegs	treasure,greedTreasure			Collectibles_170_DaddyLonglegs.png
+171	active	Spider Butt	treasure			Collectibles_171_SpiderButt.png
+172	familiar	Sacrificial Dagger	treasure,devil,greedTreasure,greedDevil			Collectibles_172_SacrificialDagger.png
+173	passive	Mitre	treasure,angel,greedAngel			Collectibles_173_Mitre.png
+174	familiar	Rainbow Baby	treasure,greedTreasure			Collectibles_174_RainbowBaby.png
+175	active	Dad's Key	treasure,keyMaster,greedTreasure			Collectibles_175_DadsKey.png
+176	passive	Stem Cells	treasure,boss,greedBoss	shotspeed		Collectibles_176_StemCells.png
+177	active	Portable Slot	shop,beggar			Collectibles_177_PortableSlot.png
+178	familiar	Holy Water	treasure,angel,greedAngel			Collectibles_178_HolyWater.png
+179	passive	Fate	goldenChest,greedGoldenChest	flying		Collectibles_179_Fate.png
+180	passive	The Black Bean	treasure,beggar			Collectibles_180_BlackBean.png
+181	active	White Pony		flying,speed		Collectibles_181_WhitePony.png
+182	passive	Sacred Heart	angel,greedAngel	damage,firedelay,range,shotspeed,tearcolor,tearflag	1	Collectibles_182_SacredHeart.png
+183	passive	Tooth Picks	boss,greedBoss	firedelay,shotspeed		Collectibles_183_ToothPicks.png
+184	passive	Holy Grail	angel,greedAngel	flying		Collectibles_184_HolyGrail.png
+185	passive	Dead Dove	angel,greedAngel	flying,tearcolor,tearflag		Collectibles_185_DeadDove.png
+186	active	Blood Rights	treasure,greedTreasure			Collectibles_186_BloodRights.png
+187	familiar	Guppy's Hairball	devil,greedDevil			Collectibles_187_GuppysHairball.png
+188	familiar	Abel	treasure,goldenChest,greedTreasure,greedGoldenChest			Collectibles_188_Abel.png
+189	passive	SMB Super Fan	treasure,greedTreasure	damage,firedelay,range,speed		Collectibles_189_SMBSuperFan.png
+190	passive	Pyro	treasure,secret,greedTreasure,bombBum			Collectibles_190_Pyro.png
+191	passive	3 Dollar Bill	treasure,greedTreasure			Collectibles_191_3DollarBill.png
+192	active	Telepathy For Dummies	treasure,library,greedTreasure,greedLibrary	tearcolor,tearflag		Collectibles_192_TelepathyForDummies.png
+193	passive	MEAT!	boss,greedBoss	damage		Collectibles_193_Meat.png
+194	passive	Magic 8 Ball	boss,greedBoss	shotspeed		Collectibles_194_Magic8Ball.png
+195	passive	Mom's Coin Purse	shop,boss,beggar,demonBeggar,dungeon,greedBoss			Collectibles_195_MomsCoinPurse.png
+196	passive	Squeezy	boss,greedBoss	firedelay		Collectibles_196_Squeezy.png
+197	passive	Jesus Juice	boss,greedBoss,greedAngel	damage,range		Collectibles_197_JesusJuice.png
+198	passive	Box	boss,beggar,dungeon,greedBoss			Collectibles_198_Box.png
+199	passive	Mom's Key	shop,keyMaster,dungeon,greedBoss			collectibles_199_momskey.png
+200	passive	Mom's Eyeshadow	treasure,dungeon,greedTreasure	tearcolor		collectibles_200_momseyeshadow.png
+201	passive	Iron Bar	treasure,greedTreasure	damage		collectibles_201_ironbar.png
+202	passive	Midas' Touch	treasure			collectibles_202_midastouch.png
+203	passive	Humbleing Bundle	shop			collectibles_203_humblingbundle.png
+204	passive	Fanny Pack	shop,beggar,greedShop			collectibles_204_fannypack.png
+205	passive	Sharp Plug	shop			collectibles_205_sharpplug.png
+206	familiar	Guillotine	treasure,greedTreasure	damage,firedelay		collectibles_206_guillotine.png
+207	familiar	Ball of Bandages				collectibles_207_ballofbandages.png
+208	passive	Champion Belt	shop,greedShop	damage		collectibles_208_championbelt.png
+209	passive	Butt Bombs	treasure,challenge,bossrush,greedTreasure,bombBum			collectibles_209_buttbombs.png
+210	passive	Gnawed Leaf	treasure,greedTreasure			Collectibles_210_GnawedLeaf.png
+211	passive	Spiderbaby	treasure			collectibles_211_spiderbaby.png
+212	passive	Guppy's Collar	devil,redChest,curse,greedCurse,greedDevil			Collectibles_212_GuppysCollar.png
+213	passive	Lost Contact	treasure,secret,greedTreasure	shotspeed		collectibles_213_lostcontact.png
+214	passive	Anemic	treasure,greedTreasure	range		collectibles_214_anemic.png
+215	passive	Goat Head	devil,goldenChest,curse	damage		collectibles_215_goathead.png
+216	passive	Ceremonial Robes	devil,demonBeggar,curse,greedDevil	damage		Collectibles_216_CeremonialRobes.png
+217	passive	Mom's Wig	treasure,dungeon,greedTreasure	firedelay		collectibles_217_momswig.png
+218	passive	Placenta	boss			collectibles_218_placenta.png
+219	passive	Old Bandage	boss			collectibles_219_oldbandage.png
+220	passive	Sad Bombs	treasure,challenge,bossrush,greedTreasure,bombBum			collectibles_220_sadbombs.png
+221	passive	Rubber Cement	treasure,greedTreasure	tearcolor,tearflag		collectibles_221_rubbercement.png
+222	passive	Anti-Gravity	treasure,greedTreasure	firedelay,tearflag		collectibles_222_antigravity.png
+223	passive	Pyromaniac	treasure,greedTreasure		1	collectibles_223_pyromaniac.png
+224	passive	Cricket's Body	treasure,greedTreasure	firedelay,range,tearflag		collectibles_224_cricketsbody.png
+225	passive	Gimpy	treasure,devil,demonBeggar,curse,greedDevil			collectibles_225_gimpy.png
+226	passive	Black Lotus	secret,greedTreasure			collectibles_226_blacklotus.png
+227	passive	Piggy Bank	treasure,shop			collectibles_227_piggybank.png
+228	passive	Mom's Perfume	treasure,dungeon,greedTreasure	firedelay,tearcolor		collectibles_228_momsperfume.png
+229	passive	Monstro's Lung	treasure,greedTreasure	damage,firedelay,luck,range,shotspeed,speed		collectibles_229_monstroslung.png
+230	passive	Abaddon	devil,greedDevil	damage,speed		collectibles_230_abaddon.png
+231	passive	Ball of Tar	treasure,greedTreasure	tearcolor		collectibles_231_balloftar.png
+232	passive	Stop Watch	shop	speed		collectibles_232_stopwatch.png
+233	passive	Tiny Planet	treasure,greedTreasure	damage,firedelay,luck,range,shotspeed,speed		collectibles_233_tinyplanet.png
+234	passive	Infestation 2	treasure,greedTreasure			collectibles_234_infestation2.png
+236	passive	E. Coli	treasure,greedTreasure			collectibles_236_ecoli.png
+237	passive	Death's Touch	treasure,devil,greedTreasure,greedDevil	damage,firedelay,tearflag		collectibles_237_deathstouch.png
+238	familiar	Key Piece 1				collectibles_238_keypiece1.png
+239	familiar	Key Piece 2				collectibles_239_keypiece2.png
+240	passive	Experimental Treatment	treasure,boss,demonBeggar,greedBoss	damage,firedelay,luck,range,shotspeed,speed		collectibles_240_experimentaltreatment.png
+241	passive	Contract from Below	devil,demonBeggar,curse,greedDevil			collectibles_241_contractfrombelow.png
+242	passive	Infamy	treasure,secret,goldenChest,greedTreasure,greedGoldenChest			collectibles_242_infamy.png
+243	passive	Trinity Shield	angel,greedAngel	weapon		collectibles_243_trinityshield.png
+244	passive	Tech.5	treasure,greedTreasure			collectibles_244_techpointfive.png
+245	passive	20/20	treasure,greedTreasure			collectibles_245_2020.png
+246	passive	Blue Map	shop,beggar,greedShop			collectibles_246_bluemap.png
+247	passive	BFFS!	shop,greedShop			collectibles_247_bffs.png
+248	passive	Hive Mind	shop,greedShop			collectibles_248_hivemind.png
+249	passive	There's Options	shop			collectibles_249_theresoptions.png
+250	passive	Bogo Bombs	shop,bombBum			collectibles_250_bogobombs.png
+251	passive	Starter Deck	shop,greedShop			collectibles_251_starterdeck.png
+252	passive	Little Baggy	shop,goldenChest,greedShop			collectibles_252_littlebaggy.png
+253	passive	Magic Scab	boss,greedBoss	luck		collectibles_253_magicscab.png
+254	passive	Blood Clot	boss,greedTreasure,greedBoss			collectibles_254_bloodclot.png
+255	passive	Screw	boss,greedBoss	firedelay,shotspeed		collectibles_255_screw.png
+256	passive	Hot Bombs	treasure,greedTreasure,bombBum			collectibles_256_hotbombs.png
+257	passive	Fire Mind	treasure,greedTreasure	tearflag		collectibles_257_firemind.png
+258	passive	Missing No.	secret,greedTreasure	damage,firedelay,luck,range,shotspeed,speed		collectibles_258_missingno.png
+259	passive	Dark Matter	devil,greedDevil	damage		collectibles_259_darkmatter.png
+260	passive	Black Candle	shop,curse,greedShop	damage		collectibles_260_blackcandle.png
+261	passive	Proptosis	treasure,greedTreasure	damage,tearflag		collectibles_261_proptosis.png
+262	passive	Missing Page 2	devil,secret,demonBeggar,greedLibrary	damage		collectibles_262_missingpage2.png
+264	familiar	Smart Fly	treasure,keyMaster,greedTreasure			collectibles_264_smartfly.png
+265	familiar	Dry Baby	treasure,greedTreasure			collectibles_265_drybaby.png
+266	familiar	Juicy Sack	treasure,greedTreasure			collectibles_266_juicysack.png
+267	familiar	Robo-Baby 2.0	treasure,greedTreasure			collectibles_267_robobaby2.png
+268	familiar	Rotten Baby	treasure,devil,greedTreasure,greedDevil			collectibles_268_rottenbaby.png
+269	familiar	Headless Baby	treasure,devil,greedTreasure,greedDevil			collectibles_269_headlessbaby.png
+270	familiar	Leech	treasure,greedDevil			collectibles_270_leech.png
+271	familiar	Mystery Sack	treasure,secret,goldenChest,beggar,greedTreasure			collectibles_271_mysterysack.png
+272	familiar	BBF	treasure,keyMaster			collectibles_272_bff.png
+273	familiar	Bob's Brain	treasure,goldenChest,greedTreasure,greedGoldenChest			collectibles_273_bobsbrain.png
+274	familiar	Best Bud	treasure,greedTreasure			collectibles_274_bestbud.png
+275	familiar	Lil Brimstone	treasure,devil			collectibles_275_lilbrimstone.png
+276	familiar	Isaac's Heart	treasure			collectibles_276_isaacsheart.png
+277	familiar	Lil Haunt	treasure,greedTreasure			collectibles_277_lilhaunt.png
+278	familiar	Dark Bum	treasure,devil			collectibles_278_darkbum.png
+279	familiar	Big Fan	treasure,greedTreasure			collectibles_279_bigfan.png
+280	familiar	Sissy Longlegs	treasure,greedTreasure			collectibles_280_sissylonglegs.png
+281	familiar	Punching Bag	treasure,greedTreasure			collectibles_281_punchingbag.png
+282	active	How to Jump	treasure,library			collectibles_282_howtojump.png
+283	active	D100	treasure,greedShop		1	collectibles_283_d100.png
+284	active	D4	treasure,greedShop			collectibles_284_d4.png
+285	active	D10	treasure,greedShop			collectibles_285_d10.png
+286	active	Blank Card	treasure,shop,secret,greedShop			collectibles_286_blankcard.png
+287	active	Book of Secrets	treasure,secret,library,greedLibrary			collectibles_287_bookofsecrets.png
+288	active	Box of Spiders	treasure,greedTreasure			collectibles_288_boxofspiders.png
+289	active	Red Candle	shop,greedShop			collectibles_289_redcandle.png
+290	active	The Jar	shop			collectibles_290_thejar.png
+291	active	Flush!	treasure,greedTreasure			collectibles_291_flush.png
+292	active	Satanic Bible	treasure,devil,library,greedDevil,greedLibrary			collectibles_292_satanicbible.png
+293	active	Head of Krampus				collectibles_293_headofkrampus.png
+294	active	Butter Bean	treasure,beggar			collectibles_294_butterbean.png
+295	active	Magic Fingers	treasure,shop			collectibles_295_magicfingers.png
+296	active	Converter	shop			collectibles_296_converter.png
+297	active	Pandora's Box	shop,redChest,greedShop			collectibles_297_bluebox.png
+298	active	Unicorn Stump	treasure	speed		collectibles_298_unicornstump.png
+299	passive	Taurus	treasure,greedTreasure	speed		collectibles_299_taurus.png
+300	passive	Aries	treasure,greedTreasure	speed		collectibles_300_aries.png
+301	passive	Cancer	treasure,greedTreasure			collectibles_301_cancer.png
+302	passive	Leo	treasure,greedTreasure			collectibles_302_leo.png
+303	passive	Virgo	treasure,greedTreasure			collectibles_303_virgo.png
+304	passive	Libra	treasure	damage,firedelay,range,speed		collectibles_304_libra.png
+305	passive	Scorpio	treasure,greedTreasure	tearflag		collectibles_305_scorpio.png
+306	passive	Sagittarius	treasure,greedTreasure	speed,tearflag		collectibles_306_sagittarius.png
+307	passive	Capricorn	treasure,greedTreasure	damage,firedelay,range,speed		collectibles_307_capricorn.png
+308	passive	Aquarius	treasure,greedTreasure			collectibles_308_aquarius.png
+309	passive	Pisces	treasure,greedTreasure	firedelay,tearflag		collectibles_309_pisces.png
+310	passive	Eve's Mascara	treasure,greedTreasure	damage,firedelay,shotspeed,tearcolor		collectibles_310_evesmascara.png
+311	passive	Judas' Shadow	treasure,devil,greedTreasure,greedDevil			collectibles_311_judasshadow.png
+312	passive	Maggy's Bow	treasure,greedTreasure			collectibles_312_maggysbow.png
+313	passive	Holy Mantle	treasure,angel,greedAngel			collectibles_313_holymantle.png
+314	passive	Thunder Thighs	treasure,greedBoss	speed		collectibles_314_thunderthighs.png
+315	passive	Strange Attractor	treasure,greedTreasure	tearflag		collectibles_315_strangeattractor.png
+316	passive	Cursed Eye	treasure,secret,redChest,greedTreasure	damage,firedelay,luck,range,shotspeed,speed		collectibles_316_cursedeye.png
+317	passive	Mysterious Liquid	treasure,greedTreasure	tearflag		collectibles_317_mysteriousliquid.png
+318	familiar	Gemini	treasure,greedTreasure			collectibles_318_gemini.png
+319	familiar	Cain's Other Eye	treasure,greedTreasure			collectibles_319_cainseye.png
+320	familiar	???'s Only Friend	treasure,keyMaster,greedTreasure			collectibles_320_bluebabysonlyfriend.png
+321	familiar	Samson's Chains	treasure,secret,greedTreasure			collectibles_321_samsonschains.png
+322	familiar	Mongo Baby	treasure,greedTreasure			collectibles_322_mongobaby.png
+323	active	Isaac's Tears	treasure			collectibles_323_isaacstears.png
+324	active	Undefined	treasure			collectibles_324_Undefined.png
+325	active	Scissors	treasure,greedTreasure	familiars		collectibles_325_scissors.png
+326	active	Breath of Life	angel			collectibles_326_breathoflife.png
+327	passive	The Polaroid				collectibles_327_thepolaroid.png
+328	passive	The Negative				collectibles_328_thenegative.png
+329	passive	The Ludovico Technique	treasure,greedTreasure	damage,firedelay,luck,range,shotspeed,speed	1	collectibles_329_theludovicotechnique.png
+330	passive	Soy Milk	treasure,greedTreasure	damage,firedelay,tearcolor		collectibles_330_soymilk.png
+331	passive	Godhead	angel,greedTreasure,greedAngel	damage,firedelay,range,shotspeed,tearflag	1	collectibles_331_godhead.png
+332	passive	Lazarus' Rags	treasure,angel,greedTreasure			collectibles_332_lazarusrags.png
+333	passive	The Mind	treasure,angel,greedTreasure,greedAngel			collectibles_333_mind.png
+334	passive	The Body	treasure,angel,greedTreasure,greedAngel			collectibles_334_body.png
+335	passive	The Soul	treasure,angel,greedTreasure,greedAngel			collectibles_335_soul.png
+336	passive	Dead Onion	treasure,greedTreasure	range,shotspeed,tearcolor,tearflag		collectibles_336_deadonion.png
+337	passive	Broken Watch	shop			collectibles_337_brokenwatch.png
+338	active	The Boomerang	shop			collectibles_338_boomerang.png
+339	passive	Safety Pin	boss,greedBoss	damage,range,shotspeed		collectibles_339_SafetyPin.png
+340	passive	Caffeine Pill	boss,demonBeggar,greedBoss	speed		collectibles_340_CaffeinePill.png
+341	passive	Torn Photo	boss,greedBoss	firedelay,shotspeed		collectibles_341_TornPhoto.png
+342	passive	Blue Cap	boss,greedBoss	firedelay,shotspeed		collectibles_342_BlueCap.png
+343	passive	Latch Key	boss,greedBoss	luck		collectibles_343_LatchKey.png
+344	passive	Match Book	boss,greedBoss	damage		collectibles_344_MatchBook.png
+345	passive	Synthoil	boss,demonBeggar,greedBoss	damage,range		collectibles_345_Synthoil.png
+346	passive	A Snack	boss,dungeon,greedBoss			collectibles_346_ASnack.png
+347	active	Diplopia	shop			Collectibles_347_Diplopia.png
+348	active	Placebo	shop,greedShop			Collectibles_348_Placebo.png
+349	active	Wooden Nickel	shop,greedTreasure			Collectibles_349_WoodenNickel.png
+350	passive	Toxic Shock	treasure			Collectibles_350_ToxicShock.png
+351	active	Mega Bean	treasure,greedTreasure			Collectibles_351_MegaBean.png
+352	active	Glass Cannon	treasure,greedTreasure			Collectibles_352_GlassCannon.png
+353	passive	Bomber Boy	treasure,bossrush,greedTreasure,bombBum			Collectibles_353_BomberBoy.png
+354	passive	Crack Jacks	boss,greedBoss			Collectibles_354_CrackJacks.png
+355	passive	Mom's Pearls	boss,dungeon,greedBoss	luck,range		Collectibles_355_MomsPearls.png
+356	passive	Car Battery	shop,greedShop			Collectibles_356_CarBattery.png
+357	active	Box of Friends	shop,greedTreasure	familiars		Collectibles_357_PandorasBox.png
+358	passive	The Wiz	treasure,greedTreasure	tearflag		Collectibles_358_TheWiz.png
+359	passive	8 Inch Nails	treasure,greedTreasure	damage,tearflag		Collectibles_359_8InchNails.png
+360	familiar	Incubus	devil,greedDevil			Collectibles_360_Incubus.png
+361	familiar	Fate's Reward	treasure,goldenChest,greedGoldenChest			Collectibles_361_FatesReward.png
+362	familiar	Lil Chest	treasure,beggar,greedTreasure			Collectibles_362_LilChest.png
+363	familiar	Sworn Protector	angel,greedAngel			Collectibles_363_SwornProtector.png
+364	familiar	Friend Zone	treasure,keyMaster,greedTreasure			Collectibles_364_FriendZone.png
+365	familiar	Lost Fly	treasure,keyMaster,greedTreasure			Collectibles_365_LostFly.png
+366	passive	Scatter Bombs	treasure,bossrush,greedTreasure,bombBum			Collectibles_366_ScatterBombs.png
+367	passive	Sticky Bombs	treasure,bossrush,greedTreasure,bombBum			Collectibles_367_StickyBombs.png
+368	passive	Epiphora	treasure,greedTreasure			Collectibles_368_Epiphora.png
+369	passive	Continuum	treasure,greedTreasure	range,tearflag		Collectibles_369_Continuum.png
+370	passive	Mr. Dolly	boss,greedBoss	firedelay,range		Collectibles_370_MrDolly.png
+371	passive	Curse of the Tower	treasure,redChest,curse,bossrush,greedTreasure			Collectibles_371_CurseOfTheTower.png
+372	familiar	Charged Baby	shop,greedShop			Collectibles_372_ChargedBaby.png
+373	passive	Dead Eye	treasure,greedTreasure			Collectibles_373_DeadEye.png
+374	passive	Holy Light	treasure,angel,greedTreasure			Collectibles_374_HolyLight.png
+375	passive	Host Hat	treasure,greedTreasure			Collectibles_375_HostHat.png
+376	passive	Restock	shop,beggar			Collectibles_376_Restock.png
+377	passive	Bursting Sack	treasure,greedTreasure			Collectibles_377_BurstingSack.png
+378	passive	No. 2	treasure,bossrush,greedTreasure			Collectibles_378_NumberTwo.png
+379	passive	Pupula Duplex	treasure,greedTreasure	tearflag		Collectibles_379_PupulaDuplex.png
+380	passive	Pay To Play	shop,greedTreasure,greedShop			Collectibles_380_PayToPlay.png
+381	passive	Eden's Blessing	treasure	firedelay		Collectibles_381_EdensBlessing.png
+382	active	Friendly Ball	treasure,greedTreasure			Collectibles_382_FriendlyBall.png
+383	active	Tear Detonator	shop,greedTreasure			Collectibles_383_TearDetonator.png
+384	familiar	Lil Gurdy	treasure,greedTreasure			Collectibles_384_LilGurdy.png
+385	familiar	Bumbo	treasure,beggar			Collectibles_385_Bumbo.png
+386	active	D12	treasure,greedShop			Collectibles_386_D12.png
+387	familiar	Censer	angel,greedAngel			Collectibles_387_Censer.png
+388	familiar	Key Bum	treasure,secret,keyMaster			Collectibles_388_KeyBum.png
+389	familiar	Rune Bag	treasure,secret,goldenChest,greedTreasure			Collectibles_389_RuneBag.png
+390	familiar	Seraphim	treasure,angel,greedAngel			Collectibles_390_Seraphim.png
+391	passive	Betrayal	treasure,devil,greedTreasure,greedDevil			Collectibles_391_Betrayal.png
+392	passive	Zodiac	treasure,greedTreasure			Collectibles_392_Zodiac.png
+393	passive	Serpent's Kiss	treasure,greedTreasure			Collectibles_393_SerpentsKiss.png
+394	passive	Marked	treasure,greedTreasure	firedelay,range		Collectibles_394_Marked.png
+395	passive	Tech X	treasure,greedTreasure	damage,firedelay,luck,range,shotspeed,speed		Collectibles_395_TechX.png
+396	active	Ventricle Razor	shop			Collectibles_396_VentricleRazor.png
+397	passive	Tractor Beam	treasure,greedTreasure	firedelay,range,shotspeed,tearflag		Collectibles_397_TractorBeam.png
+398	passive	God's Flesh	treasure,greedTreasure	tearcolor		Collectibles_398_GodsFlesh.png
+399	passive	Maw of the Void	devil,greedDevil	damage,tearcolor		Collectibles_399_MawOfTheVoid.png
+400	passive	Spear of Destiny	angel,greedAngel			Collectibles_400_SpearOfDestiny.png
+401	passive	Explosivo	treasure,bossrush,greedTreasure	tearcolor,tearflag		Collectibles_401_Explosivo.png
+402	passive	Chaos	shop,greedShop			Collectibles_402_Chaos.png
+403	familiar	Spider Mod	shop,greedShop			Collectibles_403_SpiderMod.png
+404	familiar	Farting Baby	treasure			collectibles_404_fartbaby.png
+405	familiar	GB Bug	treasure,secret,greedShop			Collectibles_405_GBBug.png
+406	active	D8	treasure,greedShop			Collectibles_406_D8.png
+407	passive	Purity	treasure,greedTreasure,greedAngel	damage,firedelay,range,speed		Collectibles_407_Purity.png
+408	passive	Athame	devil,curse,greedDevil			Collectibles_408_Athame.png
+409	passive	Empty Vessel	devil,greedDevil	flying		Collectibles_409_EmptyVessel.png
+410	passive	Evil Eye	treasure,greedTreasure			Collectibles_410_EvilEye.png
+411	passive	Lusty Blood	treasure,greedTreasure	damage		Collectibles_411_LustyBlood.png
+412	passive	Cambion Conception	devil,greedDevil			Collectibles_412_CambionConception.png
+413	passive	Immaculate Conception	angel,greedAngel			Collectibles_413_ImmaculateConception.png
+414	passive	More Options	shop			Collectibles_414_MoreOptions.png
+415	passive	Crown Of Light	angel,greedAngel	damage,range,shotspeed		Collectibles_415_CrownOfLight.png
+416	passive	Deep Pockets	shop,greedTreasure,greedShop			Collectibles_416_deeppockets.png
+417	familiar	Succubus	devil,demonBeggar			Collectibles_417_Succubus.png
+418	passive	Fruit Cake	treasure			Collectibles_418_FruitCake.png
+419	active	Teleport 2.0	treasure			Collectibles_419_Teleport20.png
+420	passive	Black Powder	devil,greedDevil			Collectibles_420_BlackPowder.png
+421	active	Kidney Bean	treasure,greedTreasure			Collectibles_421_KidneyBean.png
+422	active	Glowing Hour Glass	treasure,shop			Collectibles_422_GlowingHourGlass.png
+423	passive	Circle of Protection	angel,greedAngel			Collectibles_423_CircleOfProtection.png
+424	passive	Sack Head	shop			Collectibles_424_SackHead.png
+425	passive	Night Light	shop,greedTreasure			Collectibles_425_NightLight.png
+426	familiar	Obsessed Fan	treasure,greedTreasure			Collectibles_426_ObsessedFan.png
+427	active	Mine Crafter	treasure			Collectibles_427_MineCrafter.png
+428	passive	PJs	boss,greedBoss			Collectibles_428_PJs.png
+429	passive	Head of the Keeper	goldenChest	tearflag		Collectibles_429_HeadOfTheKeeper.png
+430	familiar	Papa Fly	treasure,greedTreasure			Collectibles_430_PapaFly.png
+431	familiar	Multidimensional Baby	treasure,devil,greedTreasure,greedDevil			Collectibles_431_MultidimensionalBaby.png
+432	passive	Glitter Bombs	treasure,bossrush,greedTreasure			Collectibles_432_GlitterBombs.png
+433	passive	My Shadow	devil,greedDevil			Collectibles_433_MyShadow.png
+434	active	Jar of Flies	shop,greedTreasure,greedShop			Collectibles_434_JarOfFlies.png
+435	familiar	Lil Loki	treasure			Collectibles_435_LilLoki.png
+436	familiar	Milk!	treasure,greedTreasure	firedelay		Collectibles_436_Milk.png
+437	active	D7	treasure			Collectibles_437_D7.png
+438	passive	Binky	boss,greedBoss	firedelay		Collectibles_438_Binky.png
+439	active	Mom's Box	shop,dungeon,greedShop	damage,firedelay,luck,range,shotspeed,speed		Collectibles_439_MomsBox.png
+440	passive	Kidney Stone	treasure,greedTreasure	firedelay,range,speed		Collectibles_440_KidneyStone.png
+441	active	Mega Blast	devil,greedDevil			collectibles_441_megasatansbreath.png
+442	passive	Dark Prince's Crown	devil,curse,greedDevil	firedelay,range,shotspeed		Collectibles_442_DarkPrincesCrown.png
+443	passive	Apple!	treasure,greedTreasure	firedelay		Collectibles_443_Apple.png
+444	passive	Lead Pencil	treasure,greedTreasure			Collectibles_444_LeadPencil.png
+445	passive	Dog Tooth	treasure,greedTreasure	damage,speed		Collectibles_445_DogTooth.png
+446	passive	Dead Tooth	treasure,greedTreasure			Collectibles_446_DeadTooth.png
+447	passive	Linger Bean	treasure,beggar,greedTreasure			Collectibles_447_LingerBean.png
+448	passive	Shard of Glass	treasure,greedTreasure			Collectibles_448_ShardOfGlass.png
+449	passive	Metal Plate	treasure,greedTreasure			Collectibles_449_MetalPlate.png
+450	passive	Eye of Greed	secret,greedTreasure			Collectibles_450_EyeOfGreed.png
+451	passive	Tarot Cloth	shop,curse,greedShop,greedDevil			Collectibles_451_TarotCloth.png
+452	passive	Varicose Veins	treasure,greedTreasure			Collectibles_452_VaricoseVeins.png
+453	passive	Compound Fracture	treasure,greedTreasure	range,tearflag		Collectibles_453_CompoundFracture.png
+454	passive	Polydactyly	boss,greedBoss			Collectibles_454_Polydactyly.png
+455	passive	Dad's Lost Coin	boss,beggar,greedBoss	range		Collectibles_455_DadsLostCoin.png
+456	passive	Moldy Bread	boss,beggar,dungeon,greedBoss			Collectibles_456_MoldyBread.png
+457	passive	Cone Head	treasure,greedTreasure			Collectibles_457_Conehead.png
+458	passive	Belly Button	boss,greedBoss			Collectibles_458_BellyButton.png
+459	passive	Sinus Infection	treasure,greedTreasure			Collectibles_459_SinusInfection.png
+460	passive	Glaucoma	treasure,greedTreasure			Collectibles_460_Glaucoma.png
+461	passive	Parasitoid	treasure,greedTreasure	range		Collectibles_461_Parasitoid.png
+462	passive	Eye of Belial	devil,greedDevil	range,tearflag		Collectibles_462_EyeOfBelial.png
+463	passive	Sulfuric Acid	treasure,greedTreasure	damage,tearcolor,tearflag		Collectibles_463_SulfuricAcid.png
+464	passive	Glyph of Balance	angel,greedAngel			Collectibles_464_GlyphOfBalance.png
+465	passive	Analog Stick	treasure,greedTreasure	firedelay		Collectibles_465_AnalogStick.png
+466	passive	Contagion	treasure,greedTreasure			Collectibles_466_Contagion.png
+467	familiar	Finger!	treasure,greedTreasure			Collectibles_467_Finger.png
+468	familiar	Shade	devil,curse,greedDevil			Collectibles_468_Shade.png
+469	familiar	Depression	treasure,greedTreasure			Collectibles_469_Depression.png
+470	familiar	Hushy	treasure,greedTreasure			Collectibles_470_Hushy.png
+471	familiar	Lil Monstro	treasure,greedTreasure			Collectibles_471_LilMonstro.png
+472	familiar	King Baby	shop,greedShop			Collectibles_472_KingBaby.png
+473	familiar	Big Chubby	treasure,greedTreasure			Collectibles_473_BigChubby.png
+474	familiar	Tonsil				Collectibles_474_Tonsil.png
+475	active	Plan C	shop,devil,redChest,demonBeggar,curse,greedShop			Collectibles_475_PlanC.png
+476	active	D1	treasure,greedShop			Collectibles_476_D1.png
+477	active	Void	devil,angel,greedShop			Collectibles_477_Void.png
+478	active	Pause	treasure,greedShop			Collectibles_478_Pause.png
+479	active	Smelter	shop			Collectibles_479_Smelter.png
+480	active	Compost	shop,secret			Collectibles_480_Compost.png
+481	active	Dataminer	treasure,greedShop			Collectibles_481_Dataminer.png
+482	active	Clicker	treasure,greedShop			Collectibles_482_Clicker.png
+483	active	Mama Mega!	shop,challenge,greedShop,bombBum			Collectibles_483_MaMaMega.png
+484	active	Wait What?	treasure,greedTreasure			Collectibles_484_WaitWhat.png
+485	active	Crooked Penny	treasure,shop,beggar,greedShop			collectibles_485_crookedpenny.png
+486	active	Dull Razor	shop,greedShop			collectibles_486_dullrazor.png
+487	active	Potato Peeler	shop,demonBeggar,greedShop			collectibles_487_potatopeeler.png
+488	active	Metronome	treasure,greedShop	damage,firedelay,luck,range,shotspeed,speed		collectibles_488_metronome.png
+489	active	D Infinity	treasure,greedShop			collectibles_489_dinfinity.png
+490	active	Eden's Soul	angel,greedAngel			collectibles_490_edenssoul.png
+491	familiar	Acid Baby	treasure,demonBeggar			collectibles_491_acidbaby.png
+492	familiar	YO LISTEN!	treasure	luck		collectibles_492_yolisten.png
+493	passive	Adrenaline	treasure,greedTreasure			collectibles_493_adderline.png
+494	passive	Jacob's Ladder	treasure,greedTreasure	tearflag		collectibles_494_jacobsladder.png
+495	passive	Ghost Pepper	treasure,greedTreasure			collectibles_495_ghostpepper.png
+496	passive	Euthanasia	treasure,demonBeggar,curse,greedTreasure			collectibles_496_euthanasia.png
+497	passive	Camo Undies	treasure,greedTreasure			collectibles_497_camoundies.png
+498	passive	Duality	devil,angel			collectibles_498_duality.png
+499	passive	Eucharist	angel,greedAngel			collectibles_499_eucharist.png
+500	familiar	Sack of Sacks	shop,goldenChest,greedShop			Collectibles_500_SackOfSacks.png
+501	passive	Greed's Gullet	secret			Collectibles_501_GreedsGullet.png
+502	passive	Large Zit	treasure,greedTreasure			Collectibles_502_LargeZit.png
+503	passive	Little Horn	demonBeggar,curse,greedTreasure,greedDevil			Collectibles_503_LittleHorn.png
+504	active	Brown Nugget	treasure,greedTreasure	familiars		Collectibles_504_BrownNugget.png
+505	passive	Poke Go	shop,greedShop			Collectibles_505_PokeGo.png
+506	passive	Backstabber	treasure,greedTreasure			Collectibles_506_Backstabber.png
+507	active	Sharp Straw	treasure,greedTreasure			Collectibles_507_SharpStraw.png
+508	familiar	Mom's Razor	treasure,curse,dungeon,greedTreasure			Collectibles_508_MomsRazor.png
+509	familiar	Bloodshot Eye	treasure,greedTreasure			Collectibles_509_BloodshotEye.png
+510	active	Delirious	angel			Collectibles_510_Delirious.png
+511	familiar	Angry Fly	treasure,greedTreasure			Collectibles_511_AngryFly.png
+512	active	Black Hole	treasure,greedTreasure,greedShop			Collectibles_512_BlackHole.png
+513	passive	Bozo	treasure,greedTreasure	damage		Collectibles_513_Bozo.png
+514	passive	Broken Modem	shop,greedTreasure			Collectibles_514_BrokenModem.png
+515	active	Mystery Gift	shop,greedTreasure,greedShop			Collectibles_515_MysteryGift.png
+516	active	Sprinkler	treasure,greedTreasure,greedShop	familiars		Collectibles_516_Sprinkler.png
+517	passive	Fast Bombs	treasure,challenge,bossrush,greedTreasure,bombBum			Collectibles_517_FastBombs.png
+518	familiar	Buddy in a Box	shop,greedTreasure,greedShop			Collectibles_518_BuddyBox.png
+519	familiar	Lil Delirium	devil,angel,greedDevil			Collectibles_519_LilDelirium.png
+520	passive	Jumper Cables	shop,greedTreasure			Collectibles_520_JumperCable.png
+521	active	Coupon	shop			Collectibles_521_CerealCutout.png
+522	active	Telekinesis	treasure,greedTreasure			Collectibles_522_Telekinesis.png
+523	active	Moving Box	shop			collectibles_523_movingbox.png
+524	passive	Technology Zero	treasure,greedTreasure	tearflag		Collectibles_524_TechnologyZero.png
+525	familiar	Leprosy	treasure,greedTreasure			Collectibles_525_Leprosy.png
+526	familiar	7 Seals	devil,angel,greedDevil,greedAngel			Collectibles_526_7Seals.png
+527	active	Mr. ME!	shop,greedShop			Collectibles_527_Mr_Me.png
+528	familiar	Angelic Prism	angel,greedAngel			collectibles_528_angelic prism.png
+529	passive	Pop!	treasure,greedTreasure	tearflag		Collectibles_529_Pop.png
+530	passive	Death's List	devil,greedDevil			Collectibles_530_DeathsList.png
+531	passive	Haemolacria	treasure,greedTreasure	damage,firedelay,tearcolor,weapon		Collectibles_531_Haemolacria.png
+532	passive	Lachryphagy	treasure,greedTreasure			Collectibles_532_Lachryphagy.png
+533	passive	Trisagion	angel,greedAngel	tearflag		Collectibles_533_Trisagion.png
+534	passive	Schoolbag	shop,greedShop			collectibles_534_Schoolbag.png
+535	passive	Blanket	shop,greedShop			Collectibles_535_Blanket.png
+536	active	Sacrificial Altar	devil,curse,greedDevil			Collectibles_536_SacrificialAltar.png
+537	familiar	Lil Spewer	treasure,greedTreasure			Collectibles_537_LilSpewer.png
+538	passive	Marbles	boss,greedBoss	luck		Collectibles_538_Marbles.png
+539	familiar	Mystery Egg	treasure,greedTreasure			Collectibles_539_MysteryEgg.png
+540	passive	Flat Stone	treasure,greedTreasure	damage,firedelay,tearflag		Collectibles_540_FlatStone.png
+541	passive	Marrow	boss,greedBoss			Collectibles_541_Marrow.png
+542	familiar	Slipped Rib	treasure,greedTreasure			Collectibles_542_SlippedRib.png
+543	familiar	Hallowed Ground	treasure,greedTreasure			Collectibles_543_HallowedGround.png
+544	familiar	Pointy Rib	treasure,greedTreasure			Collectibles_544_PointyRib.png
+545	active	Book of the Dead	treasure,devil,library,greedTreasure,greedDevil,greedLibrary			Collectibles_545_BookOfTheDead.png
+546	passive	Dad's Ring	secret			Collectibles_546_DadsRing.png
+547	passive	Divorce Papers	boss,greedBoss	firedelay		Collectibles_547_DivorcePapers.png
+548	familiar	Jaw Bone	treasure,greedTreasure			Collectibles_548_JawBone.png
+549	passive	Brittle Bones	treasure,greedTreasure			Collectibles_549_BrittleBones.png
+550	active	Broken Shovel				Collectibles_550_ShovelPiece1.png
+551	passive	Broken Shovel				Collectibles_551_ShovelPiece2.png
+552	active	Mom's Shovel				Collectibles_552_MomsShovel.png
+1	trinket	Swallowed Penny				trinket_001_swallowedpenny.png
+2	trinket	Petrified Poop				trinket_002_petrifiedpoop.png
+3	trinket	AAA Battery				trinket_003_aaabattery.png
+4	trinket	Broken Remote				trinket_004_brokenremote.png
+5	trinket	Purple Heart				trinket_005_purpleheart.png
+6	trinket	Broken Magnet				trinket_006_brokenmagnet.png
+7	trinket	Rosary Bead				trinket_007_rosarybead.png
+8	trinket	Cartridge				trinket_008_cartridge.png
+9	trinket	Pulse Worm		tearflag		trinket_009_pulseworm.png
+10	trinket	Wiggle Worm		firedelay,tearflag		trinket_010_wiggleworm.png
+11	trinket	Ring Worm		tearflag		trinket_011_ringworm.png
+12	trinket	Flat Worm		tearflag		trinket_012_flatworm.png
+13	trinket	Store Credit				trinket_013_storecredit.png
+14	trinket	Callus				trinket_014_callus.png
+15	trinket	Lucky Rock				trinket_015_luckyrock.png
+16	trinket	Mom's Toenail				trinket_016_momstoenail.png
+17	trinket	Black Lipstick		damage		trinket_017_blacklipstick.png
+18	trinket	Bible Tract				trinket_018_bibletract.png
+19	trinket	Paper Clip				trinket_019_paperclip.png
+20	trinket	Monkey Paw				trinket_020_monkeypaw.png
+21	trinket	Mysterious Paper				trinket_021_mysteriouspaper.png
+22	trinket	Daemon's Tail		damage		trinket_022_daemonstail.png
+23	trinket	Missing Poster				trinket_023_missingposter.png
+24	trinket	Butt Penny				trinket_024_buttpenny.png
+25	trinket	Mysterious Candy				trinket_025_mysteriouscandy.png
+26	trinket	Hook Worm		range,tearflag		trinket_026_hookworm.png
+27	trinket	Whip Worm		shotspeed		trinket_027_whipworm.png
+28	trinket	Broken Ankh				trinket_028_brokenankh.png
+29	trinket	Fish Head				trinket_029_fishhead.png
+30	trinket	Pinky Eye				trinket_030_pinkyeye.png
+31	trinket	Push Pin				trinket_031_pushpin.png
+32	trinket	Liberty Cap				trinket_032_libertycap.png
+33	trinket	Umbilical Cord				trinket_033_umbilicalcord.png
+34	trinket	Child's Heart				trinket_034_childsheart.png
+35	trinket	Curved Horn		damage		trinket_035_curvedhorn.png
+36	trinket	Rusted Key				trinket_036_rustedkey.png
+37	trinket	Goat Hoof		speed		trinket_037_goathoof.png
+38	trinket	Mom's Pearl				trinket_038_momspearl.png
+39	trinket	Cancer		firedelay		trinket_039_cancer.png
+40	trinket	Red Patch		damage		trinket_040_redpatch.png
+41	trinket	Match Stick				trinket_041_matchstick.png
+42	trinket	Lucky Toe		luck		trinket_042_luckytoe.png
+43	trinket	Cursed Skull				trinket_043_cursedskull.png
+44	trinket	Safety Cap				trinket_044_safetycap.png
+45	trinket	Ace of Spades				trinket_045_aceofspades.png
+46	trinket	Isaac's Fork				trinket_046_isaacsfork.png
+48	trinket	A Missing Page				trinket_048_amissingpage.png
+49	trinket	Bloody Penny				trinket_049_bloodypenny.png
+50	trinket	Burnt Penny				trinket_050_burntpenny.png
+51	trinket	Flat Penny				trinket_051_flatpenny.png
+52	trinket	Counterfeit Penny				trinket_052_counterfeitpenny.png
+53	trinket	Tick				trinket_053_tick.png
+54	trinket	Isaac's Head		familiars		trinket_054_isaacshead.png
+55	trinket	Maggy's Faith				trinket_055_maggysfaith.png
+56	trinket	Judas' Tongue				trinket_056_judastongue.png
+57	trinket	???'s Soul		familiars		trinket_057_qmarkssoul.png
+58	trinket	Samson's Lock		damage		trinket_058_samsonslock.png
+59	trinket	Cain's Eye				trinket_059_cainseye.png
+60	trinket	Eve's Bird Foot		familiars		trinket_060_evesbirdfoot.png
+61	trinket	The Left Hand				trinket_061_thelefthand.png
+62	trinket	Shiny Rock				trinket_062_ShinyRock.png
+63	trinket	Safety Scissors				trinket_063_SafetyScissors.png
+64	trinket	Rainbow Worm		firedelay,range,shotspeed,tearflag		trinket_064_RainbowWorm.png
+65	trinket	Tape Worm		range		trinket_065_TapeWorm.png
+66	trinket	Lazy Worm		range,shotspeed		trinket_066_LazyWorm.png
+67	trinket	Cracked Dice				trinket_067_CrackedDice.png
+68	trinket	Super Magnet				trinket_068_SuperMagnet.png
+69	trinket	Faded Polaroid				trinket_069_FadedPolaroid.png
+70	trinket	Louse				trinket_070_Louse.png
+71	trinket	Bob's Bladder				trinket_071_BobsBladder.png
+72	trinket	Watch Battery				trinket_072_WatchBattery.png
+73	trinket	Blasting Cap				trinket_073_BlastingCap.png
+74	trinket	Stud Finder				trinket_074_StudFinder.png
+75	trinket	Error		damage,firedelay,luck,range,shotspeed,speed		trinket_075_Error.png
+76	trinket	Poker Chip				trinket_076_PokerChip.png
+77	trinket	Blister		tearflag		trinket_077_Blister.png
+78	trinket	Second Hand				trinket_078_SecondHand.png
+79	trinket	Endless Nameless				trinket_079_EndlessNameless.png
+80	trinket	Black Feather		damage		trinket_080_BlackFeather.png
+81	trinket	Blind Rage				trinket_081_BlindRage.png
+82	trinket	Golden Horse Shoe				trinket_082_GoldenHorseShoe.png
+83	trinket	Store Key				trinket_083_storekey.png
+84	trinket	Rib of Greed				trinket_084_ribofgreed.png
+85	trinket	Karma				trinket_085_karma.png
+86	trinket	Lil Larva				Trinket_086_LilLarva.png
+87	trinket	Mom's Locket				Trinket_087_MomsLocket.png
+88	trinket	NO!				Trinket_088_NO.png
+89	trinket	Child Leash				Trinket_089_ChildLeash.png
+90	trinket	Brown Cap				Trinket_090_BrownCap.png
+91	trinket	Meconium				Trinket_091_Meconium.png
+92	trinket	Cracked Crown		damage,firedelay,luck,range,shotspeed,speed		Trinket_092_CrackedCrown.png
+93	trinket	Used Diaper				Trinket_093_UsedDiaper.png
+94	trinket	Fish Tail				Trinket_094_FishTail.png
+95	trinket	Black Tooth				Trinket_095_BlackTooth.png
+96	trinket	Ouroboros Worm		range,tearflag		Trinket_096_OuroborosWorm.png
+97	trinket	Tonsil				Trinket_097_Tonsil.png
+98	trinket	Nose Goblin				Trinket_098_NoseGoblin.png
+99	trinket	Super Ball				Trinket_099_SuperBall.png
+100	trinket	Vibrant Bulb		damage,firedelay,luck,range,shotspeed,speed		Trinket_100_VibrantBulb.png
+101	trinket	Dim Bulb		damage,firedelay,luck,range,shotspeed,speed		Trinket_101_DimBulb.png
+102	trinket	Fragmented Card				Trinket_102_FragmentedCard.png
+103	trinket	Equality!				Trinket_103_Equality.png
+104	trinket	Wish Bone				trinket_104_wishbone.png
+105	trinket	Bag Lunch				trinket_105_baglunch.png
+106	trinket	Lost Cork				trinket_106_lostcork.png
+107	trinket	Crow Heart				trinket_107_crowheart.png
+108	trinket	Walnut				trinket_108_walnut.png
+109	trinket	Duct Tape				trinket_109_ducttape.png
+110	trinket	Silver Dollar				trinket_110_silverdollar.png
+111	trinket	Bloody Crown				trinket_111_bloodycrown.png
+112	trinket	Pay To Win				trinket_112_paytowin.png
+113	trinket	Locust of War				trinket_113_LocustOfWrath.png
+114	trinket	Locust of Pestilence				trinket_114_LocustOfPestilence.png
+115	trinket	Locust of Famine				trinket_115_LocustOfFamine.png
+116	trinket	Locust of Death				trinket_116_LocustOfDeath.png
+117	trinket	Locust of Conquest				trinket_117_LocustOfConquest.png
+118	trinket	Bat Wing		flying		trinket_118_BatWing.png
+119	trinket	Stem Cell				trinket_119_StemCell.png
+120	trinket	Hairpin				trinket_120_Hairpin.png
+121	trinket	Wooden Cross				trinket_121_WoodenCross.png
+122	trinket	Butter!				trinket_122_Butter.png
+123	trinket	Filigree Feather				Trinket_123_FiligreeFeather.png
+124	trinket	Door Stop				trinket_124_woodendoorstop.png
+125	trinket	Extension Cord				trinket_125_Extensioncord.png
+126	trinket	Rotten Penny				trinket_126_RottenPenny.png
+127	trinket	Baby-Bender				trinket_127_BabyBender.png
+128	trinket	Finger Bone				trinket_128_FingerBone.png
+1	card	0 - The Fool				card_1.png
+2	card	I - The Magician				card_2.png
+3	card	II - The High Priestess				card_3.png
+4	card	III - The Empress				card_4.png
+5	card	IV - The Emperor				card_5.png
+6	card	V - The Hierophant				card_6.png
+7	card	VI - The Lovers				card_7.png
+8	card	VII - The Chariot				card_8.png
+9	card	VIII - Justice				card_9.png
+10	card	IX - The Hermit				card_10.png
+11	card	X - Wheel of Fortune				card_11.png
+12	card	XI - Strength				card_12.png
+13	card	XII - The Hanged Man				card_13.png
+14	card	XIII - Death				card_14.png
+15	card	XIV - Temperance				card_15.png
+16	card	XV - The Devil				card_16.png
+17	card	XVI - The Tower				card_17.png
+18	card	XVII - The Stars				card_18.png
+19	card	XVIII - The Moon				card_19.png
+20	card	XIX - The Sun				card_20.png
+21	card	XX - Judgement				card_21.png
+22	card	XXI - The World				card_22.png
+23	card	2 of Clubs				card_23.png
+24	card	2 of Diamonds				card_24.png
+25	card	2 of Spades				card_25.png
+26	card	2 of Hearts				card_26.png
+27	card	Ace of Clubs				card_27.png
+28	card	Ace of Diamonds				card_28.png
+29	card	Ace of Spades				card_29.png
+30	card	Ace of Hearts				card_30.png
+31	card	Joker				card_31.png
+32	card	Hagalaz				card_32.png
+33	card	Jera				card_33.png
+34	card	Ehwaz				card_34.png
+35	card	Dagaz				card_35.png
+36	card	Ansuz				card_36.png
+37	card	Perthro				card_37.png
+38	card	Berkano				card_38.png
+39	card	Algiz				card_39.png
+40	card	Blank Rune				card_40.png
+41	card	Black Rune				card_41.png
+42	card	Chaos Card				card_42.png
+43	card	Credit Card				card_43.png
+44	card	Rules Card				card_44.png
+45	card	A Card Against Humanity				card_45.png
+46	card	Suicide King				card_46.png
+47	card	Get Out Of Jail Free Card				card_47.png
+48	card	? Card				card_48.png
+49	card	Dice Shard				card_49.png
+50	card	Emergency Contact				card_50.png
+51	card	Holy Card				card_51.png
+52	card	Huge Growth				card_52.png
+53	card	Ancient Recall				card_53.png
+54	card	Era Walk				card_54.png
+0	pill	Bad Gas				pill.png
+1	pill	Bad Trip				pill.png
+2	pill	Balls of Steel				pill.png
+3	pill	Bombs are Key				pill.png
+4	pill	Explosive Diarrhea				pill.png
+5	pill	Full Health				pill.png
+6	pill	Health Down				pill.png
+7	pill	Health Up				pill.png
+8	pill	I Found Pills				pill.png
+9	pill	Puberty				pill.png
+10	pill	Pretty Fly				pill.png
+11	pill	Range Down				pill.png
+12	pill	Range Up				pill.png
+13	pill	Speed Down				pill.png
+14	pill	Speed Up				pill.png
+15	pill	Tears Down				pill.png
+16	pill	Tears Up				pill.png
+17	pill	Luck Down				pill.png
+18	pill	Luck Up				pill.png
+19	pill	Telepills				pill.png
+20	pill	48 Hour Energy!				pill.png
+21	pill	Hematemesis				pill.png
+22	pill	Paralysis				pill.png
+23	pill	I can see forever!				pill.png
+24	pill	Pheromones				pill.png
+25	pill	Amnesia				pill.png
+26	pill	Lemon Party				pill.png
+27	pill	R U A Wizard?				pill.png
+28	pill	Percs!				pill.png
+29	pill	Addicted!				pill.png
+30	pill	Re-Lax				pill.png
+31	pill	???				pill.png
+32	pill	One makes you larger				pill.png
+33	pill	One makes you small				pill.png
+34	pill	Infested!				pill.png
+35	pill	Infested?				pill.png
+36	pill	Power Pill!				pill.png
+37	pill	Retro Vision				pill.png
+38	pill	Friends Till The End!				pill.png
+39	pill	X-Lax				pill.png
+40	pill	Something's wrong...				pill.png
+41	pill	I'm Drowsy...				pill.png
+42	pill	I'm Excited!!				pill.png
+43	pill	Gulp!				pill.png
+44	pill	Horf!				pill.png
+45	pill	Feels like I'm walking on sunshine!				pill.png
+46	pill	Vurp!				pill.png
