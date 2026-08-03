@@ -2750,6 +2750,22 @@ footer a{color:var(--dim)}
             backdrop drawn for that effect &#8212; poison creeps, fire licks up from the
             floor, brimstone sweeps across. Off-screen rows stop animating entirely.</p></div>
 
+        <div class="card"><div class="n">Run</div><h3>Pills and cards, read off the screen</h3>
+          <p>The log says a pocket item was used but never which one &#8212; and by then the
+            slot is empty. So the slot is read beforehand and the use is attributed to it.
+            A <b>card is named outright</b>; a pill is harder, because the game reshuffles
+            which colour does what every run, so you say what one did <b>once</b> and every
+            later pill of that colour counts itself. Ones taken before you named the colour
+            are backfilled.</p></div>
+
+        <div class="card"><div class="n">Run</div><h3>Numbers checked against the game</h3>
+          <p>Turn on the comparison table, type what the HUD shows, and any disagreement is
+            a bug in the stat model rather than in your reading of it. It found three of
+            Cain's six base stats wrong. At the start of a run the HUD <b>is</b> the
+            character's baseline, so those numbers can be saved as measured base stats
+            &#8212; play a character once and its row is settled from the game itself, not
+            from a wiki.</p></div>
+
         <div class="card"><div class="n">Advisor</div><h3>Worth taking?</h3>
           <p>In a Devil, Treasure or Angel room it reads the pedestals off the screen
             &#8212; passively, no injection &#8212; and scores what is on them against

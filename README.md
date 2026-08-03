@@ -91,6 +91,34 @@ sprite size, corner rounding, pixel-art scaling, what each row shows, how many r
 load at a time, four independent motion switches, decimal places, and the storage
 mode. Every one is wired to something real — none of them are decorative.
 
+### Pills and cards in the pocket slot
+
+The log announces that a pocket item was used but never which one, and by the time
+it does the slot is already empty. So the slot is read from the screen on a trigger
+and the use is attributed to whatever was last seen there.
+
+A **card** is named outright — its face is its identity and the game never
+reshuffles it. A **pill** is harder: the game reshuffles which colour carries which
+effect every run and writes it down nowhere reachable. Say what one did once and
+every later pill of that colour is counted automatically, with any taken before you
+named it backfilled.
+
+Blank Rune and Black Rune ship no art that separates them, so those are reported as
+a pair rather than guessed, and never entered into a run.
+
+### Checking the numbers against the game
+
+The whole app rests on seven numbers being right, and they came from a mod's data
+files. Turn on the comparison table, type what the in-game HUD shows, and anything
+that disagrees is a bug in the stat model rather than in your reading of it.
+
+It found three of Cain's six base stats wrong on the first try — including two that
+were not flagged as uncertain.
+
+At the start of a run, before any item, the HUD **is** the character's baseline, so
+those numbers can be saved as that character's measured base stats. Play a character
+once and its row is settled from the game itself rather than from a wiki.
+
 ### The room advisor
 
 In a Devil, Treasure or Angel room it reads the pedestals off the screen — passively,
