@@ -3,7 +3,11 @@ import CoreGraphics
 import Foundation
 import Ingest
 import IsaacCore
-import ScreenCaptureKit
+// @preconcurrency because SCShareableContent is not annotated Sendable in every SDK we
+// build against: it compiles clean on Swift 6.2 here and fails strict-concurrency on the
+// 6.1 toolchain CI uses. The annotation is the SDK's gap, not ours -- every use below is
+// already confined to this actor.
+@preconcurrency import ScreenCaptureKit
 
 /// Identifies the items sitting on pedestals by looking at the screen.
 ///
