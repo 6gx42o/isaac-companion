@@ -103,3 +103,25 @@ struct VendoredToleranceTests {
         #expect(v.gaps.isEmpty)
     }
 }
+
+@Suite("Character bases measured against the game")
+struct MeasuredCharacterTests {
+    /// Pins the values read off the in-game HUD, so the shipped table cannot drift away
+    /// from the only numbers here that were checked against Isaac itself rather than
+    /// against a mod's data files.
+    @Test("Cain carries the speed and damage the HUD showed")
+    func cain() {
+        let cain = Characters.resolve(2)
+        #expect(cain.name == "Cain")
+        #expect(cain.speed == 1.3, "the HUD showed 1.3, not the 1.1 this used to claim")
+        #expect(
+            cain.damageMultiplier == 1.2,
+            "the HUD showed 4.2 damage, which is 3.5 x 1.2 -- the multiplier was missing")
+        // Base luck must stay 0: Lucky Foot is his starting item and the log reports it
+        // as an ordinary pickup, so a base of 1 would read 2 in game.
+        #expect(cain.luck == 0)
+        // Range is still unmeasured, and saying so is the point of the flag.
+        #expect(cain.unverified.contains("range"))
+        #expect(!cain.unverified.contains("speed"), "speed has now been measured")
+    }
+}

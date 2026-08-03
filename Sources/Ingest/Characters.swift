@@ -22,9 +22,20 @@ public enum Characters {
         // STARTING ITEM, and the log reports it as a normal pickup. Giving him base
         // luck 1 as well double-counts it. Same rule for every character below --
         // base stats here must exclude anything a starting item grants.
+        // MEASURED against the in-game HUD, 2026-08-03, seed GNXQ 9WM1, Cain carrying
+        // only Lucky Foot and Scorpio -- and Scorpio changes no numeric stat (it is
+        // tearflag/poison only), so the HUD was showing his base stats plus the +1 luck
+        // his starting item grants.
+        //
+        // Two of these were WRONG, and neither was flagged uncertain:
+        //   speed  was 1.1, the HUD says 1.3
+        //   damage was 3.5, the HUD says 4.2 -- which is 3.5 x 1.2, so he carries a
+        //          damage multiplier, modelled the same way Judas's 1.35 is.
         Character(
-            id: 2, name: "Cain", speed: 1.1,
-            unverified: ["range", "shotSpeed"], notes: "Starts with Lucky Foot (+1 luck)."),
+            id: 2, name: "Cain", speed: 1.3, damageMultiplier: 1.2,
+            unverified: ["range"],
+            notes: "Starts with Lucky Foot (+1 luck). Speed and damage measured "
+                + "against the in-game HUD."),
         Character(
             id: 3, name: "Judas", damageMultiplier: 1.35,
             unverified: ["damageMultiplier", "speed"], notes: "Higher damage, 1 red heart."),

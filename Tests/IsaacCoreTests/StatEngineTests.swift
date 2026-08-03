@@ -171,3 +171,43 @@ struct StatEngineTests {
         #expect(s.tearDelay.value >= StatEngine.minDelayFromStats)
     }
 }
+
+@Suite("Measured against the in-game HUD")
+struct HUDMeasuredTests {
+    /// The first numbers in this project ever checked against the game itself rather
+    /// than against a mod's data files.
+    ///
+    /// Seed GNXQ 9WM1, Cain, carrying only Lucky Foot (his starting item) and Scorpio.
+    /// Scorpio is tearflag-only -- poison tears, no numeric change -- so the HUD was
+    /// showing his base stats plus the +1 luck Lucky Foot grants. Two were wrong, and
+    /// neither had been flagged uncertain.
+    @Test("Cain's base damage and speed match what the game displays")
+    func cainMatchesTheHUD() {
+        // Built here rather than read from Ingest.Characters: this target cannot import
+        // Ingest, and the point is to pin the NUMBERS the game showed, so a table change
+        // that silently drops them fails the IngestTests parity check instead.
+        let cain = Character(
+            id: 2, name: "Cain", speed: 1.3, damageMultiplier: 1.2)
+        let luckyFoot = item(46, "Lucky Foot", ItemDelta(luck: 1))
+        let stats = StatEngine.compute(character: cain, items: [luckyFoot])
+
+        // The HUD said 4.20. It was computing 3.50 -- Cain's x1.2 damage multiplier
+        // was missing entirely.
+        #expect(abs(stats.damage.value - 4.2) < 0.005, "damage \(stats.damage.value)")
+        // The HUD said 1.30. It was computing 1.10.
+        #expect(abs(stats.speed.value - 1.3) < 0.005, "speed \(stats.speed.value)")
+        // These two already agreed, and are pinned so a future change has to keep them.
+        #expect(abs(stats.shotSpeed.value - 1.0) < 0.005)
+        #expect(abs(stats.luck.value - 1.0) < 0.005, "Lucky Foot is his starting item")
+    }
+
+    @Test("Cain's luck still comes from the item, not from his base")
+    func luckIsNotDoubleCounted() {
+        // The HUD reads 1, and it must be 1 because of the pickup -- giving him base
+        // luck 1 as well would read 2 the moment the log announces Lucky Foot.
+        let cain = Character(id: 2, name: "Cain", speed: 1.3, damageMultiplier: 1.2)
+        #expect(cain.luck == 0)
+        let bare = StatEngine.compute(character: cain, items: [])
+        #expect(abs(bare.luck.value - 0) < 0.005)
+    }
+}
