@@ -3339,3 +3339,16 @@ kbd {
 .vwait { color: var(--faint); font-family: var(--mono); font-size: 11px; }
 .vactions { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
 .vhint { color: var(--dim); font-size: 12.5px; }
+
+/* The game's own HUD stat glyphs. Pixel art, so never smoothed. */
+.hudicon {
+  display: inline-block;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  vertical-align: -3px;
+  flex: 0 0 auto;
+  opacity: .92;
+}
+.stat .label { display: flex; align-items: center; gap: 6px; }
+.vtable td .hudicon { margin-right: 7px; }
+.vname { display: inline-flex; align-items: center; }

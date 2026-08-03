@@ -50,6 +50,10 @@ public struct Extractor: Sendable {
     public static let monsterFrames = 3
     /// Every pill colour the game deals, in one horizontal strip.
     public static var pillStrip: URL { harvestDir.appending(path: "pills_strip.png") }
+    /// The icons the game's own stat HUD draws (FoundHUD=1). A 64x64 sheet of 16x16
+    /// cells, four per row: the boot, the eye, the range dashes, the tear-in-flight,
+    /// the sword and the clover, then the angel and devil marks.
+    public static var hudStats: URL { harvestDir.appending(path: "hudstats.png") }
 
     public static var isHarvested: Bool {
         FileManager.default.fileExists(atPath: itemPoolsXML.path)
@@ -104,6 +108,14 @@ public struct Extractor: Sendable {
             let src = resources.appending(path: name)
             guard fm.fileExists(atPath: src.path) else { continue }
             try? fm.copyItem(at: src, to: Self.harvestDir.appending(path: name))
+        }
+
+        // The stat HUD's own icons. Copied rather than redrawn so the app labels a stat
+        // with exactly the glyph the game puts next to it -- the whole point is telling
+        // you which row on the HUD is range and which is shot speed.
+        let hud = resources.appending(path: "gfx/ui/hudstats.png")
+        if fm.fileExists(atPath: hud.path) {
+            try? fm.copyItem(at: hud, to: Self.hudStats)
         }
 
         // Sprites land in gfx/items/{collectibles,trinkets}/ with lowercased names,

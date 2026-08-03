@@ -956,7 +956,11 @@ function renderStats(state) {
     const cls = ["stat", key === "damage" ? "hot" : "", stat.approx ? "est" : ""]
       .filter(Boolean).join(" ");
     const card = el("div", cls);
-    card.appendChild(el("div", "label", label));
+    const labelNode = el("div", "label");
+    const glyph = hudIcon(key, 14);
+    if (glyph) labelNode.appendChild(glyph);
+    labelNode.appendChild(el("span", null, label));
+    card.appendChild(labelNode);
     const valueNode = el("div", "value", (stat.approx ? "~" : "") + fmt(stat.value));
     if (!firstRender && lastStats[key] !== undefined
         && Math.abs(lastStats[key] - stat.value) > 0.005) {
@@ -2983,7 +2987,16 @@ const VERIFY_ROWS = [
 ];
 
 let verifyOn = false;
-const hudValues = {};
+
+// Persisted, because these are readings taken by hand off a screen and there is no way
+// to get them back. A relaunch mid-session used to lose the lot.
+const HUD_KEY = "isaac.hudValues";
+const hudValues = (() => {
+  try { return JSON.parse(localStorage.getItem(HUD_KEY) || "{}"); } catch (e) { return {}; }
+})();
+function saveHudValues() {
+  try { localStorage.setItem(HUD_KEY, JSON.stringify(hudValues)); } catch (e) { /* private mode */ }
+}
 
 function renderVerify() {
   const host = $("vrows");
@@ -2994,7 +3007,13 @@ function renderVerify() {
 
   host.replaceChildren(...VERIFY_ROWS.map(({ key, label, tol, onHUD }) => {
     const tr = el("tr");
-    tr.appendChild(el("td", null, label));
+    const name = el("td");
+    const wrap = el("span", "vname");
+    const glyph = hudIcon(key, 24);
+    if (glyph) wrap.appendChild(glyph);
+    wrap.appendChild(el("span", null, label));
+    name.appendChild(wrap);
+    tr.appendChild(name);
 
     const computed = lastState?.stats?.[key]?.value ?? null;
     tr.appendChild(el("td", "num", computed == null ? "—" : fmt(computed)));
@@ -3008,6 +3027,7 @@ function renderVerify() {
       input.value = hudValues[key] ?? "";
       input.addEventListener("input", () => {
         hudValues[key] = input.value;
+        saveHudValues();
         paintVerdict(tr, key, tol, computed, input.value);
       });
       td.appendChild(input);
@@ -3076,6 +3096,53 @@ function verifyReport() {
   const clear = $("v-clear");
   if (clear) clear.onclick = () => {
     for (const { key } of VERIFY_ROWS) delete hudValues[key];
+    saveHudValues();
     renderVerify();
   };
 }
+
+/* ---- the game's own stat icons ---------------------------------------------
+   Isaac's HUD labels its six stats with glyphs and no words, so "which row is
+   range and which is shot speed" is a real question. These are the game's own
+   icons, read off your install at data-build time -- not redrawn approximations,
+   so the thing next to Range here is exactly the thing next to Range in game.
+
+   The sheet is 16x16 cells, four per row, in the order hudstats.anm2 lists them.
+   Frames 6-8 are the angel and devil marks and one the app has no use for. */
+let hudStats = null;
+
+const HUD_ICON = {
+  speed: 0,       // a boot with speed lines
+  tears: 1,       // an eye, firing
+  range: 2,       // dashes at three distances
+  shotSpeed: 3,   // a tear with a motion trail
+  damage: 4,      // a sword
+  luck: 5,        // a four-leaf clover
+};
+
+/* One 16px cell, scaled up and kept crisp. Returns null when the sheet is absent,
+   so every caller degrades to text rather than leaving a hole. */
+function hudIcon(stat, size = 16) {
+  const frame = HUD_ICON[stat];
+  if (!hudStats || frame == null) return null;
+  const cols = hudStats.cols || 4;
+  const cell = hudStats.cell || 16;
+  const i = el("i", "hudicon");
+  const scale = size / cell;
+  i.style.width = size + "px";
+  i.style.height = size + "px";
+  i.style.backgroundImage = "url(" + hudStats.uri + ")";
+  i.style.backgroundSize = (cols * cell * scale) + "px auto";
+  i.style.backgroundPosition =
+    (-(frame % cols) * cell * scale) + "px " + (-Math.floor(frame / cols) * cell * scale) + "px";
+  i.title = "what the game's HUD shows for this stat";
+  return i;
+}
+
+window.onHudStats = (data) => {
+  hudStats = data;
+  if (!data) return;
+  // Anything already on screen was drawn before the sheet arrived.
+  if (typeof renderVerify === "function") renderVerify();
+  if (lastState && typeof window.onState === "function") window.onState(lastState);
+};

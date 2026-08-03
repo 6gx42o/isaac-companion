@@ -463,6 +463,13 @@ public struct Pipeline: Sendable {
             written += strip.count
         }
 
+        // The stat HUD's icons, verbatim. Sixteen-pixel cells, so no atlas index is
+        // needed -- the layout is fixed by the game's own hudstats.anm2.
+        if let hud = try? Data(contentsOf: Extractor.hudStats) {
+            try hud.write(to: staging.appending(path: "hudstats.png"))
+            written += hud.count
+        }
+
         // One sprite sheet instead of ~680 tiny PNGs.
         if let (png, index) = buildAtlas(for: items) {
             try png.write(to: staging.appending(path: "atlas.png"))

@@ -107,6 +107,7 @@ struct WebView: NSViewRepresentable {
             webView.evaluateJavaScript("window.onAtlas(\(model.atlasJSON()))")
             // A few KB, and every pill row needs it, so it rides along with the atlas.
             webView.evaluateJavaScript("window.onStrip('pills', \(model.pillStripJSON()))")
+            webView.evaluateJavaScript("window.onHudStats(\(model.hudStatsJSON()))")
             webView.evaluateJavaScript("window.onCatalogue(\(model.catalogueJSON()))")
             pushPanelSettings()
             webView.evaluateJavaScript(

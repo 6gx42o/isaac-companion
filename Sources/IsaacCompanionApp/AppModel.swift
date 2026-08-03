@@ -1165,6 +1165,23 @@ public final class AppModel {
             + #""frames":\#(img.width / img.height)}"#
     }
 
+    /// The game's own stat-HUD icons, so a row in this app can carry the same glyph
+    /// Isaac puts next to that number. A 64x64 sheet of 16x16 cells, four per row, in
+    /// the order the game's hudstats.anm2 lists them.
+    ///
+    /// Served from the built data rather than the repository: it is the game's art, and
+    /// it comes off the user's own install like every other sprite here.
+    public func hudStatsJSON() -> String {
+        let url = DataPaths.dataDir(.abplus).appending(path: "hudstats.png")
+        guard let png = try? Data(contentsOf: url),
+              let img = NSImage(data: png)?
+                .cgImage(forProposedRect: nil, context: nil, hints: nil),
+              img.width > 0
+        else { return "null" }
+        return #"{"uri":"data:image/png;base64,\#(png.base64EncodedString())","#
+            + #""cell":16,"cols":\#(img.width / 16)}"#
+    }
+
     /// The achievement-badge and enemy atlases, same shape as the item one.
     public func iconAtlasJSON(_ name: String) -> String {
         let dir = DataPaths.dataDir(.abplus)
