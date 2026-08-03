@@ -17,11 +17,31 @@ cd "$(dirname "$0")"
 
 APP="build/IsaacCompanion.app"
 DIST="dist"
-VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
-  "$APP/Contents/Info.plist" 2>/dev/null || echo 0.1)"
-ID="local.isaaccompanion"
+# One source of truth, shared with make-app.sh. This used to read the version back out
+# of the built plist with a hardcoded "0.1" fallback, so a build failure silently
+# produced correctly-named artifacts of the wrong version.
+VERSION="$(tr -d '[:space:]' < VERSION)"
+ID="com.rushilluthra.isaaccompanion"
 
 ./make-app.sh release --universal
+
+# Signing the installers is separate from signing the app: an unsigned pkg is refused by
+# Gatekeeper even when the .app inside it is fine. Both are skipped cleanly without a
+# Developer ID, which is the normal case for a local build.
+#   export ISAAC_INSTALLER_SIGN_ID="Developer ID Installer: Your Name (TEAMID)"
+#   export ISAAC_SIGN_ID="Developer ID Application: Your Name (TEAMID)"
+#   export ISAAC_NOTARY_PROFILE="isaac"   # xcrun notarytool store-credentials isaac
+INSTALLER_ID="${ISAAC_INSTALLER_SIGN_ID:-}"
+NOTARY_PROFILE="${ISAAC_NOTARY_PROFILE:-}"
+
+notarise() {
+  [ -n "$NOTARY_PROFILE" ] || return 0
+  echo "notarising $(basename "$1")..."
+  xcrun notarytool submit "$1" --keychain-profile "$NOTARY_PROFILE" --wait
+  # Stapling is what makes the artifact work offline; without it Gatekeeper has to
+  # reach Apple on first launch and a plane or a firewall turns into "damaged app".
+  xcrun stapler staple "$1"
+}
 
 rm -rf "$DIST"
 mkdir -p "$DIST"
@@ -41,6 +61,10 @@ ln -s /Applications "$STAGE/Applications"
 hdiutil create -quiet -fs HFS+ -srcfolder "$STAGE" \
   -volname "Isaac Companion" -format UDZO -ov "$BASE.dmg"
 rm -rf "$STAGE"
+if [ -n "${ISAAC_SIGN_ID:-}" ]; then
+  codesign --force --timestamp --sign "$ISAAC_SIGN_ID" "$BASE.dmg"
+fi
+notarise "$BASE.dmg"
 
 # ---- pkg --------------------------------------------------------------------
 # --install-location /Applications, so the payload lands where the user expects
@@ -63,6 +87,14 @@ pkgutil --payload-files "$BASE.pkg" \
   | grep -q 'IsaacCompanion.app/Contents/MacOS/IsaacCompanion$' \
   || { echo "pkg payload is missing the executable" >&2; exit 1; }
 
+# A pkg needs a Developer ID *Installer* certificate, which is a different certificate
+# from the Application one that signs the .app.
+if [ -n "$INSTALLER_ID" ]; then
+  productsign --sign "$INSTALLER_ID" "$BASE.pkg" "$BASE.signed.pkg"
+  mv "$BASE.signed.pkg" "$BASE.pkg"
+fi
+notarise "$BASE.pkg"
+
 # ---- windows -----------------------------------------------------------------
 # A real PE32+ x86-64 binary, cross-compiled from here. It is a different program
 # from the Mac app -- see win/src/main.rs -- but it runs the same log parser and the
@@ -83,6 +115,12 @@ else
   echo "note: skipping the Windows build (needs mingw-w64 + the "\
     "x86_64-pc-windows-gnu Rust target)" >&2
 fi
+
+# ---- checksums ----------------------------------------------------------------
+# The auto-updater refuses to install anything whose hash is not in this file, so it
+# ships as a release asset alongside the binaries. Paths are stripped to bare filenames
+# so `shasum -c SHA256SUMS` works from whatever directory the assets were downloaded to.
+( cd "$DIST" && shasum -a 256 ./* | sed 's# \./# #' > SHA256SUMS )
 
 echo
 echo "dist:"

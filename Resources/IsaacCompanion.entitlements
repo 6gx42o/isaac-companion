@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Deliberately empty, and that is the interesting part.
+
+  This app is NOT sandboxed. It reads the game's log from
+  ~/Library/Application Support/Binding of Isaac Afterbirth+/, runs the game's own
+  ResourceExtractor out of the Steam folder, and captures the game window. None of that
+  is possible in a sandbox without a pile of temporary exceptions, so the absence of
+  com.apple.security.app-sandbox is a decision rather than an oversight.
+
+  Under the hardened runtime (Developer ID builds only, see make-app.sh) the app still
+  needs no exceptions:
+    ScreenCaptureKit is gated by TCC, not by an entitlement.
+    Nothing loads third-party plug-ins, so library validation stays on.
+    Nothing scripts other apps, so no Apple Events entitlement.
+    Nothing JITs, so no allow-jit.
+
+  If a future feature needs one, add it here with a comment naming the feature. An
+  unexplained entitlement is a permission nobody can audit later.
+
+  (Note for editors: XML comments may not contain a double hyphen. AMFI rejects the
+  whole file with "syntax error" if one sneaks in, and codesign then signs ad-hoc.)
+-->
+<plist version="1.0">
+<dict/>
+</plist>

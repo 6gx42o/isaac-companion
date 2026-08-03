@@ -119,7 +119,9 @@ public final class AppModel {
     public private(set) var launchError: String?
     private var processTimer: Timer?
 
-    public init() {}
+    /// Before anything reads UserDefaults: the bundle id changed, and the old settings
+    /// live under the old one.
+    public init() { LegacyMigration.run() }
 
     // MARK: - the game itself
 

@@ -490,15 +490,36 @@ setting; sprites, all 26 item pools with weights, item detail view, filters; and
 synergy/override engine with live build conflicts, transformation tracking, and a
 "considering a pedestal?" check.
 
-### The pedestal scanner needs re-granting after every rebuild
+### Signing
 
-`make-app.sh` ad-hoc signs the bundle, so **each rebuild produces a different signature
-and macOS silently revokes Screen Recording**. `CGPreflightScreenCaptureAccess()` then
-returns false and the scan reports it rather than failing opaquely.
+Run this once, and the Screen Recording grant stops disappearing:
 
-After running `make-app.sh`, re-grant in System Settings > Privacy & Security >
-Screen Recording (remove the old entry, add the new build). A stable Developer ID
-signature would fix this permanently.
+```bash
+./scripts/make-signing-cert.sh
+```
+
+It creates a self-signed code-signing identity in a keychain of its own. `make-app.sh`
+finds it automatically, and the designated requirement becomes `certificate leaf =
+H"..."` instead of a per-build `cdhash` — so macOS sees the same app across rebuilds and
+keeps the permission.
+
+Without it the build still works, ad-hoc, with a warning; **each rebuild then produces a
+different signature and macOS silently revokes Screen Recording**, and the scan reports
+that rather than failing opaquely.
+
+What this does *not* fix is Gatekeeper: a self-signed build still warns on download
+(`spctl` says `rejected`). That needs a Developer ID, and both scripts are already wired
+for one:
+
+```bash
+export ISAAC_SIGN_ID="Developer ID Application: Your Name (TEAMID)"
+export ISAAC_INSTALLER_SIGN_ID="Developer ID Installer: Your Name (TEAMID)"
+export ISAAC_NOTARY_PROFILE=isaac    # xcrun notarytool store-credentials isaac
+./package.sh
+```
+
+With those set the app gets the hardened runtime and a trusted timestamp, the pkg is
+`productsign`ed, and the dmg and pkg are notarised and stapled.
 
 **Still unverified:** the template *matching*. Everything upstream now works — window
 selection (by bundle id `com.Nicalis.…`, excluding this app, largest window),
