@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import Ingest
 import IsaacCore
+import IsaacVision
 
 // Dev CLI for the data pipeline. The app runs the same Ingest code in-process;
 // this exists so a build can be driven and inspected from a terminal.
@@ -222,6 +223,83 @@ case "run":
     if !seen.isEmpty {
         print("all deaths in this log (\(seen.count)):")
         for d in seen { print("  - \(d)") }
+    }
+
+case "scan":
+    // Run the pedestal matcher over a PNG from the command line.
+    //
+    // Until now the only way to exercise the matcher was to have the game running, in a
+    // Devil room, with Screen Recording granted -- which is a hard thing to iterate on
+    // and an impossible thing to put in a test. This takes the same images
+    // ISAAC_SCAN_DEBUG already dumps (scan-full.png, scan-crop-*.png) and prints what
+    // the matcher makes of them.
+    //
+    //   ingestctl scan shot.png              whole image, as if it were one crop
+    //   ingestctl scan shot.png 320 280      crop at that room position first
+    guard args.count > 1 else {
+        print("usage: ingestctl scan <image.png> [roomX roomY]")
+        exit(2)
+    }
+    let imageURL = URL(fileURLWithPath: args[1])
+    guard let nsImage = NSImage(contentsOf: imageURL),
+        var cg = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)
+    else {
+        print("cannot read an image from \(imageURL.path)")
+        exit(1)
+    }
+    let (bundle, _, _) = try Pipeline.load()
+
+    if args.count >= 4, let rx = Double(args[2]), let ry = Double(args[3]) {
+        let size = CGSize(width: cg.width, height: cg.height)
+        guard let rect = RoomGeometry.screenRect(
+            forRoomPosition: CGPoint(x: rx, y: ry), in: size),
+            let cropped = cg.cropping(to: rect)
+        else {
+            print("room position (\(rx), \(ry)) is not inside a \(cg.width)x\(cg.height) image")
+            exit(1)
+        }
+        print("cropped \(Int(rect.width))x\(Int(rect.height)) at "
+            + "(\(Int(rect.minX)), \(Int(rect.minY))) for room position (\(rx), \(ry))")
+        cg = cropped
+    }
+
+    // Same atlas the app matches against, built the same way.
+    guard let index = Pipeline.loadAtlasIndex(),
+        let atlasData = try? Data(
+            contentsOf: DataPaths.dataDir(.abplus).appending(path: "atlas.png")),
+        let atlas = NSImage(data: atlasData)?
+            .cgImage(forProposedRect: nil, context: nil, hints: nil)
+    else {
+        print("no sprite atlas -- run `ingestctl build` first")
+        exit(1)
+    }
+    let byGfx = Dictionary(
+        bundle.items.filter { $0.kind != .trinket && !$0.gfx.isEmpty }
+            .map { ($0.gfx.lowercased(), $0.id) },
+        uniquingKeysWith: { a, _ in a })
+    let templates = index.entries.compactMap { entry -> SpriteMatcher.Template? in
+        guard let id = byGfx[entry.key.lowercased()],
+            let crop = atlas.cropping(
+                to: CGRect(x: entry.x, y: entry.y, width: entry.w, height: entry.h)),
+            let pixels = SpriteMatcher.grayscale(crop, side: index.cell)
+        else { return nil }
+        return SpriteMatcher.Template(id: id, pixels: pixels)
+    }
+    let matcher = SpriteMatcher(side: index.cell, templates: templates)
+    let names = Dictionary(bundle.items.map { ($0.id, $0.name) }, uniquingKeysWith: { a, _ in a })
+
+    let started = Date()
+    let scores = matcher.scores(inImage: cg)
+    let elapsed = Date().timeIntervalSince(started)
+    print("\(templates.count) templates, \(String(format: "%.0f", elapsed * 1000)) ms\n")
+    for (rank, s) in scores.prefix(10).enumerated() {
+        let mark = s.score > SpriteMatcher.confidenceFloor ? " *" : ""
+        print(String(format: "%2d. %.4f  %@%@", rank + 1, s.score,
+            names[s.id] ?? "#\(s.id)", mark))
+    }
+    if let top = scores.first, top.score <= SpriteMatcher.confidenceFloor {
+        print("\nnothing clears the \(SpriteMatcher.confidenceFloor) confidence floor, "
+            + "so a real scan would report no match rather than guess.")
     }
 
 case "gaps":
@@ -453,5 +531,5 @@ case "stats":
     print("  shots      \(s.shots)")
 
 default:
-    print("usage: ingestctl [build|extract|probe|vendor [path]|stats <item ids...>]")
+    print("usage: ingestctl [build|extract|probe|vendor [path]|stats <item ids...>|scan <image.png> [x y]]")
 }
