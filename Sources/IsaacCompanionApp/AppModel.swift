@@ -518,6 +518,11 @@ public final class AppModel {
                 // The game reshuffles which colour carries which effect, so carrying the
                 // mapping across would be worse than having none.
                 pills.reset()
+                pillsAwaitingID.removeAll()
+                unidentifiedPocketUses = 0
+                heldPill = nil
+                heldCard = nil
+                heldCardAlternatives = []
                 continue
             }
             guard let event = parser.parse(line: line) else { continue }
@@ -530,6 +535,11 @@ public final class AppModel {
                 archiveCurrentRun()
                 runStartedAt = Date()
                 pills.reset()          // new run, new shuffle
+                pillsAwaitingID.removeAll()
+                unidentifiedPocketUses = 0
+                heldPill = nil
+                heldCard = nil
+                heldCardAlternatives = []
             }
             // A pill hit the floor. The player has to walk over and pick it up, so look
             // at the pocket slot a moment later rather than now.
@@ -1066,6 +1076,11 @@ public final class AppModel {
     /// first pill of each colour would be permanently lost from the run's numbers.
     public private(set) var pillsAwaitingID: [Int] = []
 
+    /// Pocket uses that could not be attributed: a card whose art the game shares with
+    /// another, or a use with nothing read from the slot. Counted rather than guessed,
+    /// so the run view can admit the gap instead of quietly under-reporting.
+    public private(set) var unidentifiedPocketUses = 0
+
     /// Debounce for the automatic read. A pill spawning is a cue to look at the pocket
     /// slot shortly afterwards, not to look immediately -- the player has to walk over
     /// and pick it up first.
@@ -1122,11 +1137,19 @@ public final class AppModel {
     /// The log cannot distinguish a pill from a card, so a card use with no pill held is
     /// correctly ignored rather than guessed at.
     private func recordPocketUse() {
-        // A card is unambiguous the moment it was seen, so it just goes in.
-        // Only record it when the sprite named exactly one card. An ambiguous pair
-        // would otherwise enter the run as a coin flip.
-        if let card = heldCard, heldCardAlternatives.count <= 1 {
-            manualAdd(itemID: card, kind: .card)
+        if let card = heldCard {
+            // Only record it when the sprite named exactly ONE card. Blank Rune and
+            // Black Rune share their art, and entering a coin flip into the run is
+            // worse than entering nothing.
+            //
+            // Either way the slot is now empty, so the held state has to be cleared.
+            // Leaving it set kept the page saying "in your pocket" about a card that
+            // had already been used, with no re-read scheduled to correct it.
+            if heldCardAlternatives.count <= 1 {
+                manualAdd(itemID: card, kind: .card)
+            } else {
+                unidentifiedPocketUses += 1
+            }
             heldCard = nil
             heldCardAlternatives = []
             heldCardConfidence = 0
@@ -1216,6 +1239,10 @@ public final class AppModel {
             var catalogue: [[String: String]]
             var held: Int?
             /// The card in the pocket slot, named outright -- no learning step.
+            /// Pocket uses nothing could be attributed to. Shown rather than swallowed,
+            /// so an under-reported run is visible as a gap instead of looking complete.
+            var unattributed: Int
+            /// The card in the pocket slot, named outright -- no learning step.
             var card: CardRow?
         }
         let byID2 = Dictionary(
@@ -1228,6 +1255,7 @@ public final class AppModel {
             .map { ["id": String($0.id), "name": $0.name] }
         let out = Out(
             seen: rows, catalogue: catalogue, held: heldPill,
+            unattributed: unidentifiedPocketUses,
             card: heldCard.flatMap { id in byID2[id].map {
                 CardRow(
                     id: id, name: $0.name, text: $0.text,

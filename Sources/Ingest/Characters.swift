@@ -18,6 +18,17 @@ import IsaacCore
 /// doubtful, which is the part worth remembering: confidence here has been a poor
 /// guide to correctness, so nothing goes in unflagged without a measurement.
 ///
+/// SOURCE for the researched rows: each character's own wiki page, read as raw wikitext
+/// (`?action=raw`) rather than as a rendered page. That matters more than it sounds --
+/// the rendered summaries were transcribed wrongly twice, while the wikitext states each
+/// parameter by name and tags its version explicitly, e.g. Cain's
+/// `range = {{dlcalt|17.75|r=4.5}}`. Reading it that way reproduced all three of Cain's
+/// independently measured values exactly, which is why it is trusted for the rest.
+///
+/// A parameter absent from an infobox means "same as Isaac", which is how the rows with
+/// no `unverified` entries below are settled: The Lost, Lilith and Apollyon genuinely
+/// carry Isaac's numbers, and saying so is an answer rather than a gap.
+///
 /// Where a value here came from research rather than a measurement it is still listed
 /// in `unverified`, even when it is almost certainly better than the default. Azazel at
 /// 17.75 is a researched number and Isaac's 23.75 would definitely be wrong for him, but
@@ -38,77 +49,82 @@ public enum Characters {
         Character(id: 0, name: "Isaac"),
         Character(
             id: 1, name: "Magdalene", speed: 0.85,
-            unverified: ["range", "tears"], notes: "Slower; larger health pool."),
-        // Luck stays 0: Cain's `items="46"` in players.xml means Lucky Foot is a
-        // STARTING ITEM, and the log reports it as a normal pickup. Giving him base
-        // luck 1 as well double-counts it. Same rule for every character below --
-        // base stats here must exclude anything a starting item grants.
+            notes: "Slower; larger health pool. Every other stat is Isaac's."),
         // MEASURED against the in-game HUD, 2026-08-03, seed GNXQ 9WM1, Cain carrying
         // only Lucky Foot and Scorpio -- and Scorpio changes no numeric stat (it is
         // tearflag/poison only), so the HUD was showing his base stats plus the +1 luck
         // his starting item grants.
         //
-        // Two of these were WRONG, and neither was flagged uncertain:
-        //   speed  was 1.1, the HUD says 1.3
-        //   damage was 3.5, the HUD says 4.2 -- which is 3.5 x 1.2, so he carries a
-        //          damage multiplier, modelled the same way Judas's 1.35 is.
+        // Three of six were WRONG, and only one was flagged uncertain:
+        //   speed  was 1.1,   the HUD says 1.3
+        //   damage was 3.5,   the HUD says 4.2 -- that is 3.5 x 1.2, a missing multiplier
+        //   range  was 23.75, the HUD says 17.75
         Character(
             id: 2, name: "Cain", speed: 1.3, range: 17.75, damageMultiplier: 1.2,
             notes: "Starts with Lucky Foot (+1 luck). Every stat here was read off "
                 + "the in-game HUD."),
         Character(
             id: 3, name: "Judas", damageMultiplier: 1.35,
-            unverified: ["damageMultiplier", "speed"], notes: "Higher damage, 1 red heart."),
+            unverified: ["damageMultiplier"], notes: "Higher damage, 1 red heart."),
         Character(
-            id: 4, name: "???", unverified: ["speed", "range", "tears"],
+            id: 4, name: "???", speed: 1.1, damageMultiplier: 1.05,
+            unverified: ["damageMultiplier", "speed"],
             notes: "No red hearts; health ups become soul hearts."),
         Character(
-            id: 5, name: "Eve", damageMultiplier: 0.75,
+            id: 5, name: "Eve", speed: 1.23, damageMultiplier: 0.75,
             unverified: ["damageMultiplier", "speed"],
-            notes: "Whore of Babylon at low health."),
+            notes: "Whore of Babylon at low health, where the multiplier becomes x1.00."),
         Character(
-            id: 6, name: "Samson", tears: -0.1, range: 18.75,
-            unverified: ["tears", "damage", "range"],
+            id: 6, name: "Samson", tears: -0.1, speed: 1.1, range: 18.75, shotSpeed: 1.31,
+            unverified: ["tears", "range", "shotSpeed", "speed"],
             notes: "Bloody Lust. Tear penalty is -0.1, not -0.05 -- a long-standing "
                 + "wiki error corrected in 2022."),
         Character(
-            id: 7, name: "Azazel", range: 17.75, fireDelayMultiplier: 0.267, flight: true,
-            unverified: ["fireDelayMultiplier", "range"],
+            id: 7, name: "Azazel", tears: 0.5, speed: 1.25, range: 17.75,
+            damageMultiplier: 1.5, fireDelayMultiplier: 0.267, flight: true,
+            unverified: ["damageMultiplier", "fireDelayMultiplier", "tears", "range", "speed"],
             notes: "Short-range Brimstone. The x1/3 figure often quoted is Tainted "
                 + "Azazel, a Repentance character that does not exist here."),
         Character(
-            id: 8, name: "Lazarus", range: 17.75,
-            unverified: ["speed", "tears", "range"]),
+            id: 8, name: "Lazarus", range: 17.75, luck: -1,
+            unverified: ["range", "luck"]),
         Character(
-            id: 9, name: "Eden", unverified: ["damage", "tears", "speed", "range", "shotSpeed", "luck"],
-            notes: "Stats are randomised per run; the log cannot tell us them."),
+            id: 9, name: "Eden",
+            unverified: ["damage", "tears", "speed", "range", "shotSpeed", "luck"],
+            notes: "Randomised per run around Isaac's values -- damage +/-1.0, tears "
+                + "+/-0.75, shot speed +/-0.25, range +/-5.00, speed +/-0.15, luck +/-1. "
+                + "The log never reports which roll you got, so measure it if you care."),
         Character(
             id: 10, name: "The Lost", flight: true,
-            unverified: ["damage", "speed"], notes: "Flight, spectral tears, no health."),
+            notes: "Flight, spectral tears, no health. Every stat is Isaac's."),
         // The 28.75 range often quoted for him is 23.75 + Anemic's +5 -- and Anemic
         // (#214) is his starting item, so it arrives through the log as a pickup.
         // Base range is the standard 23.75; the dispute was a double-count.
         Character(
-            id: 11, name: "Lazarus Risen", damageMultiplier: 1.2,
-            unverified: ["damageMultiplier"],
+            id: 11, name: "Lazarus Risen", speed: 1.25, damageMultiplier: 1.2,
+            unverified: ["damageMultiplier", "speed"],
             notes: "Starts with Anemic (+5 range)."),
         Character(
-            id: 12, name: "Dark Judas", damageMultiplier: 2.0,
-            unverified: ["damageMultiplier"], notes: "Counts as Judas for completion marks."),
+            id: 12, name: "Dark Judas", speed: 1.1, damageMultiplier: 2.0,
+            unverified: ["damageMultiplier", "speed"],
+            notes: "Counts as Judas for completion marks."),
         Character(
-            id: 13, name: "Lilith", unverified: ["damage", "tears", "speed"],
+            id: 13, name: "Lilith",
             notes: "Cannot shoot; Incubus attacks for her, so tear stats do not apply "
-                + "to Lilith directly."),
+                + "to Lilith directly. Every stat is Isaac's."),
         Character(
-            id: 14, name: "Keeper", unverified: ["damage", "tears", "speed"],
-            notes: "Coin hearts; triple shot."),
-        Character(id: 15, name: "Apollyon", unverified: ["speed", "tears"]),
+            id: 14, name: "Keeper", tears: -2, speed: 0.85, luck: -2, damageMultiplier: 1.2,
+            unverified: ["damageMultiplier", "tears", "speed", "luck"],
+            notes: "Coin hearts; triple shot. Four stats differ from Isaac's, which is "
+                + "more than any other character."),
+        Character(id: 15, name: "Apollyon", notes: "Every stat is Isaac's."),
         Character(
-            id: 16, name: "The Forgotten", unverified: ["damage", "tears", "range"],
+            id: 16, name: "The Forgotten", damageMultiplier: 1.5, fireDelayMultiplier: 0.5,
+            unverified: ["damageMultiplier", "fireDelayMultiplier"],
             notes: "Melee bone club; tear stats map differently."),
         Character(
-            id: 17, name: "The Forgotten Soul", flight: true,
-            unverified: ["damage", "tears", "speed"], notes: "Flight and spectral tears."),
+            id: 17, name: "The Forgotten Soul", speed: 1.3, flight: true,
+            unverified: ["speed"], notes: "Flight and spectral tears."),
     ]
 
     public static func byID(_ id: Int) -> Character? { all.first { $0.id == id } }

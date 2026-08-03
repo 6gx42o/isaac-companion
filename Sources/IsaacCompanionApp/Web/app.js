@@ -3217,6 +3217,15 @@ function renderPills() {
     host.appendChild(line);
   }
 
+  // An unattributed use is a hole in the run's numbers. Saying so beats looking complete.
+  if (pillData.unattributed > 0) {
+    const n = pillData.unattributed;
+    host.appendChild(el("p", "muted small",
+      n + (n === 1 ? " pocket item was" : " pocket items were") + " used that couldn't be "
+      + "identified — either nothing had been read from the slot, or it was one of the two "
+      + "runes the game draws identically. Not counted in your stats."));
+  }
+
   if (!pillData.seen.length) {
     if (!pillData.card) host.appendChild(el("p", "muted small", "No pills seen yet this run."));
     return;

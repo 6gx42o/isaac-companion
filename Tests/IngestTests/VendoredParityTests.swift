@@ -170,3 +170,74 @@ struct RangeScaleTests {
         }
     }
 }
+
+@Suite("The character roster")
+struct RosterTests {
+    private func c(_ name: String) -> Character? {
+        Characters.all.first { $0.name == name }
+    }
+
+    /// Pins every value that differs from Isaac's baseline, read from each character's
+    /// own wiki page as raw wikitext. Rendered summaries were transcribed wrongly twice;
+    /// the wikitext names each parameter and tags its version, and reproduced all three
+    /// of Cain's independently measured values exactly.
+    @Test("every non-default stat is the researched value")
+    func nonDefaults() throws {
+        #expect(c("Magdalene")?.speed == 0.85)
+        #expect(c("Judas")?.damageMultiplier == 1.35)
+        #expect(c("???")?.damageMultiplier == 1.05)
+        #expect(c("???")?.speed == 1.1)
+        #expect(c("Eve")?.damageMultiplier == 0.75)
+        #expect(c("Eve")?.speed == 1.23)
+        #expect(c("Samson")?.tears == -0.1)
+        #expect(c("Samson")?.shotSpeed == 1.31)
+        #expect(c("Samson")?.speed == 1.1)
+        #expect(c("Samson")?.range == 18.75)
+        #expect(c("Azazel")?.damageMultiplier == 1.5)
+        #expect(c("Azazel")?.fireDelayMultiplier == 0.267)
+        #expect(c("Azazel")?.speed == 1.25)
+        #expect(c("Lazarus")?.luck == -1)
+        #expect(c("Lazarus Risen")?.speed == 1.25)
+        #expect(c("Dark Judas")?.damageMultiplier == 2.0)
+        #expect(c("Dark Judas")?.speed == 1.1)
+        #expect(c("Keeper")?.damageMultiplier == 1.2)
+        #expect(c("Keeper")?.tears == -2)
+        #expect(c("Keeper")?.speed == 0.85)
+        #expect(c("Keeper")?.luck == -2)
+        #expect(c("The Forgotten")?.damageMultiplier == 1.5)
+        #expect(c("The Forgotten Soul")?.speed == 1.3)
+    }
+
+    /// A parameter absent from an infobox means "same as Isaac", so these are answers,
+    /// not gaps -- and must not be re-flagged by someone assuming a blank row is unknown.
+    @Test("characters who genuinely carry Isaac's numbers say so")
+    func isaacLikes() {
+        for name in ["The Lost", "Lilith", "Apollyon"] {
+            let ch = c(name)
+            #expect(ch?.unverified.isEmpty == true, "\(name) should be settled, not flagged")
+            #expect(ch?.damage == 3.5)
+            #expect(ch?.speed == 1.0)
+            #expect(ch?.range == 23.75)
+            #expect(ch?.damageMultiplier == 1.0)
+        }
+    }
+
+    /// Eden is randomised per run and the log never says which roll you got, so this is
+    /// the one row that must stay fully unknown rather than claiming Isaac's numbers.
+    @Test("Eden stays unknown on every stat")
+    func edenIsRandom() {
+        let eden = c("Eden")
+        for stat in ["damage", "tears", "speed", "range", "shotSpeed", "luck"] {
+            #expect(eden?.unverified.contains(stat) == true, "Eden's \(stat)")
+        }
+    }
+
+    @Test("every PlayerType the log can report resolves")
+    func everyIDResolves() {
+        for id in 0...17 {
+            let ch = Characters.resolve(id)
+            #expect(ch.id == id, "PlayerType \(id) fell through to the fallback")
+            #expect(!ch.name.isEmpty)
+        }
+    }
+}
