@@ -142,6 +142,8 @@ window.onStrip = (name, payload) => {
   strips[name] = payload;
   publishSheet(name, payload.uri);
   if (catalogue.length) renderResults();
+  // The pill rows draw the sprite itself, so they need redrawing once it arrives.
+  if (name === "pills" && typeof renderPills === "function") renderPills();
 };
 window.onIconAtlas = (name, payload) => {
   if (!payload) return;
@@ -3146,3 +3148,98 @@ window.onHudStats = (data) => {
   if (typeof renderVerify === "function") renderVerify();
   if (lastState && typeof window.onState === "function") window.onState(lastState);
 };
+
+/* ---- pills -----------------------------------------------------------------
+   What auto-detection can and cannot do here, because the limit is the game's,
+   not ours:
+
+     the log says a pill SPAWNED, and that the pocket slot was USED
+     the screen says what COLOUR the pill is
+     nothing anywhere says what that colour DOES
+
+   The game reshuffles colour -> effect every run and writes it down nowhere the
+   app can reach. So the colour is identified automatically, and the effect is
+   answered once per colour and then applied for the rest of the run -- the second
+   orange pill of a run is named without being asked about. */
+let pillData = { seen: [], catalogue: [] };
+
+function pillSwatch(colour, size = 26) {
+  const pillStrip = strips["pills"];
+  if (!pillStrip) return null;
+  const i = el("i", "pillswatch");
+  const frames = pillStrip.frames || 13;
+  i.style.width = size + "px";
+  i.style.height = size + "px";
+  i.style.backgroundImage = "url(" + pillStrip.uri + ")";
+  i.style.backgroundSize = (frames * size) + "px " + size + "px";
+  i.style.backgroundPosition = (-colour * size) + "px 0";
+  return i;
+}
+
+function renderPills() {
+  const host = document.getElementById("pill-list");
+  if (!host) return;
+  host.textContent = "";
+  if (!pillData.seen.length) {
+    host.appendChild(el("p", "muted small", "No pills seen yet this run."));
+    return;
+  }
+  for (const row of pillData.seen) {
+    const line = el("div", "pillrow");
+    const sw = pillSwatch(row.colour);
+    if (sw) line.appendChild(sw);
+
+    const body = el("div", "pillbody");
+    if (row.name) {
+      body.appendChild(el("div", "pillname", row.name));
+      const why = row.source === "identified" ? "you named it" : "worked out from a stat change";
+      body.appendChild(el("div", "muted small", why));
+    } else {
+      body.appendChild(el("div", "pillname muted", "Not known yet"));
+      const pick = el("select", "pillpick");
+      pick.appendChild(el("option", null, "What did it do?"));
+      for (const p of pillData.catalogue) {
+        const o = el("option", null, p.name);
+        o.value = p.id;
+        pick.appendChild(o);
+      }
+      pick.addEventListener("change", () => {
+        if (!pick.value) return;
+        send({ type: "identifyPill", colour: row.colour, effectID: Number(pick.value) });
+      });
+      body.appendChild(pick);
+    }
+    line.appendChild(body);
+
+    if (row.name) {
+      const clear = el("button", "ghost small", "Wrong?");
+      clear.addEventListener("click", () => send({ type: "forgetPill", colour: row.colour }));
+      line.appendChild(clear);
+    }
+    host.appendChild(line);
+  }
+}
+
+window.onPills = (data) => {
+  if (data) pillData = data;
+  renderPills();
+};
+
+window.onPillScan = (result) => {
+  const status = document.getElementById("pill-status");
+  if (!status) return;
+  if (result.error) { status.textContent = result.error; return; }
+  if (!result.found || !result.found.length) {
+    status.textContent = "No pill in the pocket slot.";
+    return;
+  }
+  const held = result.found[0];
+  status.textContent =
+    "Found a pill — " + Math.round(held.confidence * 100) + "% sure of the colour.";
+};
+
+document.getElementById("pill-scan")?.addEventListener("click", () => {
+  const status = document.getElementById("pill-status");
+  if (status) status.textContent = "Looking…";
+  send({ type: "scanPills" });
+});

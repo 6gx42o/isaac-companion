@@ -47,6 +47,12 @@ public struct RunState: Sendable, Equatable {
     public var roomVariant: Int = 0
     /// Pedestal positions logged for the current room. Cleared on room change.
     public var pedestals: [(x: Double, y: Double)] = []
+    /// Pills lying on the floor of the current room. The log gives position but no
+    /// subtype, so this is "a pill is there", not "which pill".
+    public var pillsOnFloor: [(x: Double, y: Double)] = []
+    /// How many times the pocket slot has been used this run. The log cannot say what
+    /// was used, so this is the cue to go and look at the screen, not an answer.
+    public var pocketUses: Int = 0
     public var gameRunning = false
     public var gameVersion: String?
 
@@ -57,6 +63,7 @@ public struct RunState: Sendable, Equatable {
             && a.stageType == b.stageType && a.curses == b.curses && a.items == b.items
             && a.room == b.room && a.roomVariant == b.roomVariant
             && a.pedestals.count == b.pedestals.count
+            && a.pillsOnFloor.count == b.pillsOnFloor.count && a.pocketUses == b.pocketUses
             && a.gameRunning == b.gameRunning && a.gameVersion == b.gameVersion
     }
 }
@@ -104,14 +111,22 @@ public struct RunReducer: Sendable {
             state.stage = stage
             state.stageType = type
             state.pedestals.removeAll()
+            state.pillsOnFloor.removeAll()
 
         case .roomEntered(let type, let variant):
             state.room = type
             state.roomVariant = variant
             state.pedestals.removeAll()
+            state.pillsOnFloor.removeAll()
 
         case .pedestalSpawned(let x, let y):
             state.pedestals.append((x, y))
+
+        case .pillSpawned(let x, let y):
+            state.pillsOnFloor.append((x, y))
+
+        case .pocketItemUsed:
+            state.pocketUses += 1
 
         case .itemAdded(let id, let name):
             state.items.append(PickupRecord(uid: nextUID, itemID: id, name: name))

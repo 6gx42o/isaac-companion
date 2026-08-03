@@ -3352,3 +3352,31 @@ kbd {
 .stat .label { display: flex; align-items: center; gap: 6px; }
 .vtable td .hudicon { margin-right: 7px; }
 .vname { display: inline-flex; align-items: center; }
+
+/* Pills. The swatch is the game's own sprite, because the colour IS the identity. */
+.pillswatch {
+  display: inline-block;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
+}
+.pillrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--rule);
+}
+.pillrow:first-child { border-top: 0; }
+.pillbody { flex: 1 1 auto; min-width: 0; }
+.pillname { font-size: 14px; color: var(--ash); }
+.pillpick {
+  margin-top: 4px;
+  background: var(--panel);
+  border: 1px solid var(--rule2);
+  color: var(--ash);
+  border-radius: var(--ui-radius, 3px);
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 12.5px;
+}

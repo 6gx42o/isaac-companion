@@ -180,3 +180,35 @@ struct RepeatedSeedTests {
         #expect(state.items.isEmpty)
     }
 }
+
+@Suite("LogParser - pills")
+struct PillLogTests {
+    /// Everything the log will ever tell us about a pill, which is less than you would
+    /// hope: that one exists, where it is, and that the pocket slot was used. Never
+    /// which colour, and never which effect -- the spawn line carries no subtype.
+    @Test("a pill on the floor is a pickup of variant 70")
+    func pillSpawn() {
+        let p = LogParser()
+        #expect(
+            p.parse(line: "[INFO] - Spawn Entity with Type(5), Variant(70), Pos(320.00,280.00)")
+                == .pillSpawned(x: 320, y: 280))
+        // Variant 100 is a collectible pedestal and must not be read as a pill.
+        #expect(
+            p.parse(line: "Spawn Entity with Type(5), Variant(100), Pos(320.00,280.00)")
+                == .pedestalSpawned(x: 320, y: 280))
+        // Nor may a heart (10), a coin (20) or a chest (60).
+        for v in [10, 20, 60] {
+            #expect(
+                p.parse(line: "Spawn Entity with Type(5), Variant(\(v)), Pos(80.00,160.00)") == nil,
+                "variant \(v) is not a pill")
+        }
+    }
+
+    @Test("using the pocket slot is announced, without saying what was used")
+    func pocketUse() {
+        let p = LogParser()
+        #expect(p.parse(line: "[INFO] - Action PillCard Triggered") == .pocketItemUsed)
+        #expect(p.parse(line: "Action PillCard Triggered") == .pocketItemUsed)
+        #expect(p.parse(line: "Action Something Else") == nil)
+    }
+}

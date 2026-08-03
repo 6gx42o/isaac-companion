@@ -26,6 +26,15 @@ final class RoomScanner {
         var position: CGPoint       // room coordinates, from the log
     }
 
+    /// A pill seen on screen. `colour` indexes the harvested strip; which effect that
+    /// colour carries is not knowable from the image -- the game reshuffles it per run.
+    struct PillSighting: Equatable {
+        var colour: Int
+        var confidence: Double
+        /// True for the pocket slot, false for one lying on the floor.
+        var held: Bool
+    }
+
     enum ScanError: LocalizedError {
         case noPermission
         case gameWindowNotFound
@@ -51,6 +60,8 @@ final class RoomScanner {
     private var templateSide = 32
 
     /// Builds normalised templates once, from the same atlas the UI draws.
+    private var pillReader: PillReader?
+
     func loadTemplates(items: [Item]) throws {
         guard let index = Pipeline.loadAtlasIndex(),
             let atlasData = try? Data(
@@ -83,6 +94,39 @@ final class RoomScanner {
         if matcher.templates.isEmpty { try loadTemplates(items: items) }
         guard !pedestals.isEmpty else { return [] }
 
+        let shot = try await captureGameWindow()
+        let debug = ProcessInfo.processInfo.environment["ISAAC_SCAN_DEBUG"] == "1"
+        if debug {
+            log("capture \(shot.width)x\(shot.height) templates=\(templateCount)")
+            Self.dump(shot, name: "scan-full")
+        }
+
+        return pedestals.compactMap { pedestal in
+            guard let rect = Self.screenRect(
+                forRoomPosition: CGPoint(x: pedestal.x, y: pedestal.y),
+                in: CGSize(width: shot.width, height: shot.height))
+            else { return nil }
+            guard let crop = shot.cropping(to: rect) else { return nil }
+            if debug {
+                log("pedestal (\(Int(pedestal.x)),\(Int(pedestal.y))) -> "
+                        + "rect \(Int(rect.origin.x)),\(Int(rect.origin.y)) "
+                        + "\(Int(rect.width))x\(Int(rect.height))")
+                Self.dump(crop, name: "scan-crop-\(Int(pedestal.x))-\(Int(pedestal.y))")
+                for candidate in topMatches(in: crop, count: 5) {
+                    log("  candidate #\(candidate.id) "
+                            + String(format: "%.3f", candidate.score))
+                }
+            }
+            guard let best = bestMatch(in: crop) else { return nil }
+            return Match(
+                itemID: best.id, confidence: best.score,
+                position: CGPoint(x: pedestal.x, y: pedestal.y))
+        }
+    }
+
+    /// One frame of the game window, with the permission preflight, the window search and
+    /// the fullscreen fallback that every screen-reading feature needs.
+    func captureGameWindow() async throws -> CGImage {
         // Ask up front rather than letting SCScreenshotManager fail with the opaque
         // "audio/video capture failure", which is what a missing grant actually
         // produces. CGRequestScreenCaptureAccess raises the system prompt once.
@@ -165,35 +209,62 @@ final class RoomScanner {
             shot = full.cropping(to: local) ?? full
         }
 
-        let debug = ProcessInfo.processInfo.environment["ISAAC_SCAN_DEBUG"] == "1"
-        if debug {
+        if ProcessInfo.processInfo.environment["ISAAC_SCAN_DEBUG"] == "1" {
             log("window '\(window.title ?? "?")' "
                     + "frame \(Int(window.frame.width))x\(Int(window.frame.height)) "
-                    + "capture \(shot.width)x\(shot.height) templates=\(templateCount)")
-            Self.dump(shot, name: "scan-full")
+                    + "capture \(shot.width)x\(shot.height)")
         }
+        return shot
+    }
 
-        return pedestals.compactMap { pedestal in
-            guard let rect = Self.screenRect(
-                forRoomPosition: CGPoint(x: pedestal.x, y: pedestal.y),
-                in: CGSize(width: shot.width, height: shot.height))
-            else { return nil }
-            guard let crop = shot.cropping(to: rect) else { return nil }
-            if debug {
-                log("pedestal (\(Int(pedestal.x)),\(Int(pedestal.y))) -> "
-                        + "rect \(Int(rect.origin.x)),\(Int(rect.origin.y)) "
-                        + "\(Int(rect.width))x\(Int(rect.height))")
-                Self.dump(crop, name: "scan-crop-\(Int(pedestal.x))-\(Int(pedestal.y))")
-                for candidate in topMatches(in: crop, count: 5) {
-                    log("  candidate #\(candidate.id) "
-                            + String(format: "%.3f", candidate.score))
+    /// Reads the pill colours visible on screen -- the one in the pocket slot, and any
+    /// lying on the floor of the room.
+    ///
+    /// Returns colours, not effects. Which effect a colour carries is reshuffled every
+    /// run and written down nowhere the app can reach, so the colour is genuinely the
+    /// whole answer available from the screen; the effect is learned once per run and
+    /// then applies to every pill of that colour for the rest of it.
+    ///
+    /// The search slides a window rather than cropping a fixed rectangle: the pocket slot
+    /// moves with the window size and the HUD's own scaling, and a hardcoded rectangle is
+    /// one display change away from reading empty floor.
+    func readPills(pillStrip: CGImage) async throws -> [PillSighting] {
+        if pillReader == nil { pillReader = PillReader(strip: pillStrip) }
+        guard let reader = pillReader else { throw ScanError.noAtlas }
+
+        let shot = try await captureGameWindow()
+        let debug = ProcessInfo.processInfo.environment["ISAAC_SCAN_DEBUG"] == "1"
+        if debug { Self.dump(shot, name: "pill-full") }
+
+        // A pill is drawn about 16 game-pixels across, and the game letterboxes a 480x270
+        // field into the window, so the on-screen size follows the same scale the room
+        // geometry already uses.
+        let scale = min(CGFloat(shot.width) / 480, CGFloat(shot.height) / 270)
+        let window = max(12, Int((16 * scale).rounded()))
+
+        var found: [PillSighting] = []
+
+        // The pocket slot: bottom-left of the HUD. Searched as a generous corner region
+        // rather than a point, for the reasons above.
+        let cornerW = min(shot.width, Int(120 * scale))
+        let cornerH = min(shot.height, Int(90 * scale))
+        let corner = CGRect(
+            x: 0, y: shot.height - cornerH, width: cornerW, height: cornerH)
+        if let crop = shot.cropping(to: corner) {
+            if debug { Self.dump(crop, name: "pill-pocket") }
+            if let hit = reader.best(in: crop, window: window, stride: 2) {
+                found.append(
+                    PillSighting(
+                        colour: hit.match.index, confidence: hit.match.score, held: true))
+                if debug {
+                    log("pocket pill colour \(hit.match.index) "
+                            + String(format: "%.3f", hit.match.score))
                 }
+            } else if debug {
+                log("no pill in the pocket slot")
             }
-            guard let best = bestMatch(in: crop) else { return nil }
-            return Match(
-                itemID: best.id, confidence: best.score,
-                position: CGPoint(x: pedestal.x, y: pedestal.y))
         }
+        return found
     }
 
     /// Writes an image to the scratch dir so a failing scan can actually be looked at.

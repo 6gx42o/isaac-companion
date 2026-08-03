@@ -74,6 +74,13 @@ public enum RunEvent: Equatable, Sendable {
     case levelInit(stage: Int, stageType: Int)
     case roomEntered(type: RoomType, variant: Int)
     case pedestalSpawned(x: Double, y: Double)
+    /// A pill dropped on the floor. The line carries no subtype, so this says a pill is
+    /// there and where it is -- never which colour, and never which effect.
+    case pillSpawned(x: Double, y: Double)
+    /// `Action PillCard Triggered` -- the pocket slot was used. The game does not say
+    /// whether it was a pill or a card, nor which one; it is the only moment the log
+    /// admits a consumable was swallowed at all.
+    case pocketItemUsed
     case itemAdded(id: Int, name: String)
     case itemRemoved(id: Int)
     case curse(String)
@@ -120,6 +127,10 @@ public struct LogParser: Sendable {
     private static let bossKill = re(#"^Boss (\d+) added to SaveState"#)
     private static let pedestal =
         re(#"^Spawn Entity with Type\(5\), Variant\((?:100|150)\), Pos\(([-\d.]+),([-\d.]+)\)"#)
+    /// PickupVariant 70 is PICKUP_PILL. Same shape as the pedestal line and, like it,
+    /// carries no subtype -- so the colour has to come off the screen.
+    private static let pill =
+        re(#"^Spawn Entity with Type\(5\), Variant\(70\), Pos\(([-\d.]+),([-\d.]+)\)"#)
 
     public func parse(line rawLine: String) -> RunEvent? {
         // `.whitespacesAndNewlines` also strips a stray trailing "\r", so a CRLF log
@@ -158,6 +169,11 @@ public struct LogParser: Sendable {
            let dx = Double(x), let dy = Double(y) {
             return .pedestalSpawned(x: dx, y: dy)
         }
+        if let x = group(Self.pill, 1), let y = group(Self.pill, 2),
+           let dx = Double(x), let dy = Double(y) {
+            return .pillSpawned(x: dx, y: dy)
+        }
+        if line == "Action PillCard Triggered" { return .pocketItemUsed }
         if let a = group(Self.died, 1), let b = group(Self.died, 2),
            let c = group(Self.died, 3), let d = group(Self.died, 4),
            let t = Int(a), let v = Int(b), let st = Int(c), let sv = Int(d) {

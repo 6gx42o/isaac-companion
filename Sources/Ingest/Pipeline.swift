@@ -277,11 +277,21 @@ public struct Pipeline: Sendable {
             for g in gates { consumableGates[Pair2(g.kind, g.id)] = g.achievement }
         }
 
-        // Cards and pills come only from EID -- items.xml does not list them. They have
-        // no stat deltas and no pool membership; they exist so the run view can record
-        // what you are carrying in the pocket slot, which the log never reports.
+        // Cards and pills come only from EID -- items.xml does not list them, and they
+        // have no pool membership.
+        //
+        // They DO change stats, which this used to assert they did not. Eight pills move
+        // a stat permanently -- Range, Speed, Tears and Luck, up and down -- and state
+        // the number in their own text ("+0.15 Speed", "-2 Range"). Hardcoding an empty
+        // delta meant a Speed Up pill changed nothing even when entered by hand, so the
+        // run's numbers drifted from the game's with no warning.
+        //
+        // TextDelta is the same reader the collectibles use, including its refusal to
+        // extract from conditional prose -- so a card whose effect lasts "for the room"
+        // still yields nothing, which is correct.
         for (kind, entries) in [(ItemKind.card, eid.cards), (ItemKind.pill, eid.pills)] {
             for entry in entries.values.sorted(by: { $0.id < $1.id }) {
+                let fromText = TextDelta.parse(entry.text)
                 items.append(
                     Item(
                         id: entry.id, name: entry.name, kind: kind,
@@ -289,8 +299,12 @@ public struct Pipeline: Sendable {
                         // one icon because the game randomises pill colours per run.
                         gfx: kind == .card ? "card_\(entry.id).png" : "pill.png",
                         cache: [], special: false, maxCharges: nil, devilPrice: nil,
-                        pools: [], delta: ItemDelta(), text: entry.text,
-                        confidence: .nonNumeric,
+                        pools: [], delta: fromText ?? ItemDelta(), text: entry.text,
+                        // Prose is the only source for these, so they never grade better
+                        // than single-source -- as Cancer's -2 tear delay does.
+                        confidence: fromText == nil
+                            ? (TextDelta.isConditional(entry.text) ? .conditional : .nonNumeric)
+                            : .singleSource,
                         achievement: consumableGates[Pair2(kind, entry.id)]))
             }
         }

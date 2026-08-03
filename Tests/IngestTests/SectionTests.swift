@@ -33,12 +33,52 @@ struct CardPillTests {
         #expect(card1?.name != collectible1?.name)
     }
 
-    @Test("Cards and pills carry no stat deltas and no pools")
-    func inert() {
-        for item in bundle.items where item.kind == .card || item.kind == .pill {
+    /// This used to assert that pills carry no stat delta, which is how a Speed Up pill
+    /// came to change nothing at all -- even when entered by hand. Eight pills move a
+    /// stat permanently and say the number in their own text.
+    @Test("Exactly the eight stat pills carry a delta; cards carry none")
+    func pillDeltas() {
+        let expected: [Int: String] = [
+            11: "range", 12: "range", 13: "speed", 14: "speed",
+            15: "tears", 16: "tears", 17: "luck", 18: "luck",
+        ]
+        for item in bundle.items where item.kind == .pill {
+            if let stat = expected[item.id] {
+                #expect(!item.delta.isEmpty, "\(item.name) should move \(stat)")
+            } else {
+                #expect(
+                    item.delta.isEmpty,
+                    "\(item.name) has no permanent stat change, got \(item.delta)")
+            }
+        }
+        // Cards are instant or last "for the room", so TextDelta must refuse them all.
+        for item in bundle.items where item.kind == .card {
             #expect(item.delta.isEmpty, "\(item.name) should have no permanent delta")
+        }
+    }
+
+    @Test("Cards and pills are in no item pool")
+    func noPools() {
+        for item in bundle.items where item.kind == .card || item.kind == .pill {
             #expect(item.pools.isEmpty, "\(item.name) is not in an item pool")
         }
+    }
+
+    /// The four stat pills that go up must be exactly cancelled by the four that go down
+    /// having the opposite sign -- a sign error here would read as a buff.
+    @Test("Down pills go down")
+    func downPillsGoDown() {
+        func delta(_ id: Int) -> ItemDelta? {
+            bundle.items.first { $0.kind == .pill && $0.id == id }?.delta
+        }
+        #expect((delta(11)?.range ?? 0) < 0, "Range Down")
+        #expect((delta(12)?.range ?? 0) > 0, "Range Up")
+        #expect((delta(13)?.speed ?? 0) < 0, "Speed Down")
+        #expect((delta(14)?.speed ?? 0) > 0, "Speed Up")
+        #expect((delta(15)?.tears ?? 0) < 0, "Tears Down")
+        #expect((delta(16)?.tears ?? 0) > 0, "Tears Up")
+        #expect((delta(17)?.luck ?? 0) < 0, "Luck Down")
+        #expect((delta(18)?.luck ?? 0) > 0, "Luck Up")
     }
 
     @Test("Only collectibles are auto-tracked")

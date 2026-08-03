@@ -64,6 +64,10 @@ struct WebView: NSViewRepresentable {
                 "window.onPanelGeometry(\(PanelController.shared.geometryJSON()))")
         }
 
+        func pushPills() {
+            webView?.evaluateJavaScript("window.onPills(\(model.pillsJSON()))")
+        }
+
         func pushHistory() {
             webView?.evaluateJavaScript("window.onHistory(\(model.historyJSON()))")
         }
@@ -108,6 +112,7 @@ struct WebView: NSViewRepresentable {
             // A few KB, and every pill row needs it, so it rides along with the atlas.
             webView.evaluateJavaScript("window.onStrip('pills', \(model.pillStripJSON()))")
             webView.evaluateJavaScript("window.onHudStats(\(model.hudStatsJSON()))")
+            pushPills()
             webView.evaluateJavaScript("window.onCatalogue(\(model.catalogueJSON()))")
             pushPanelSettings()
             webView.evaluateJavaScript(
@@ -250,6 +255,32 @@ struct WebView: NSViewRepresentable {
                 pushPanelGeometry()
             case "togglePanel":
                 PanelController.shared.toggle(model: model)
+            case "scanPills":
+                Task { @MainActor in
+                    let result = await model.scanPills()
+                    let json = result.found
+                        .map { "{\"colour\":\($0.colour),\"confidence\":\($0.confidence),"
+                                + "\"held\":\($0.held)}" }
+                        .joined(separator: ",")
+                    let err = result.error.map { "\"\($0.replacingOccurrences(of: "\"", with: "'"))\"" }
+                        ?? "null"
+                    self.webView?.evaluateJavaScript(
+                        "window.onPillScan({\"found\":[\(json)],\"error\":\(err)})",
+                        completionHandler: nil)
+                    self.pushPills()
+                }
+            case "identifyPill":
+                if let colour = body["colour"] as? Int, let effect = body["effectID"] as? Int {
+                    model.identifyPill(colour: colour, effectID: effect)
+                    pushPills()
+                }
+            case "forgetPill":
+                if let colour = body["colour"] as? Int {
+                    model.forgetPill(colour: colour)
+                    pushPills()
+                }
+            case "pills":
+                pushPills()
             case "scanRoom":
                 Task { @MainActor in
                     let result = await model.scanRoom()

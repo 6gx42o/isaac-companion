@@ -515,6 +515,9 @@ public final class AppModel {
                 run = RunState()
                 reducer = RunReducer()
                 runStartedAt = Date()
+                // The game reshuffles which colour carries which effect, so carrying the
+                // mapping across would be worse than having none.
+                pills.reset()
                 continue
             }
             guard let event = parser.parse(line: line) else { continue }
@@ -526,6 +529,7 @@ public final class AppModel {
             if case .runStarted(let seed) = event, seed != run.seed {
                 archiveCurrentRun()
                 runStartedAt = Date()
+                pills.reset()          // new run, new shuffle
             }
             reducer.apply(event, to: &run)
         }
@@ -971,6 +975,74 @@ public final class AppModel {
         } catch {
             return ([], error.localizedDescription)
         }
+    }
+
+    // MARK: - pills
+
+    /// What each pill colour does, this run. Reset with the run, because the game
+    /// reshuffles the mapping and a carried-over answer would be confidently wrong.
+    public private(set) var pills = PillMemory()
+
+    /// Reads the pill in the pocket slot off the screen.
+    ///
+    /// Auto-detection has a hard ceiling that is worth being honest about: the log says a
+    /// pill spawned and that the pocket slot was used, but never which pill, and the
+    /// screen gives the COLOUR and nothing else. What the colour does is reshuffled every
+    /// run. So this identifies the colour automatically, and the effect is learned once
+    /// per colour and then applied for the rest of the run without asking again.
+    func scanPills() async -> (found: [RoomScanner.PillSighting], error: String?) {
+        let stripURL = DataPaths.dataDir(.abplus).appending(path: "pills.png")
+        guard let data = try? Data(contentsOf: stripURL),
+              let image = NSImage(data: data)?
+                .cgImage(forProposedRect: nil, context: nil, hints: nil)
+        else { return ([], "No pill sprites — rebuild the data.") }
+        do {
+            let found = try await scanner.readPills(pillStrip: image)
+            for sighting in found { pills.note(colour: sighting.colour) }
+            return (found, nil)
+        } catch {
+            return ([], error.localizedDescription)
+        }
+    }
+
+    /// Records what a colour does, from the player. Applies to every pill of that colour
+    /// for the rest of the run.
+    public func identifyPill(colour: Int, effectID: Int) {
+        pills.learn(colour: colour, effectID: effectID, source: .identified)
+    }
+
+    public func forgetPill(colour: Int) { pills.forget(colour: colour) }
+
+    /// The colour memory plus the effect names, so the page can render it directly.
+    public func pillsJSON() -> String {
+        struct Row: Encodable {
+            var colour: Int
+            var effectID: Int?
+            var name: String?
+            var text: String?
+            var source: String?
+        }
+        let byID = Dictionary(
+            uniqueKeysWithValues: (bundle?.items ?? [])
+                .filter { $0.kind == .pill }.map { ($0.id, $0) })
+        let rows = pills.seen.map { colour -> Row in
+            guard let known = pills.effect(of: colour) else { return Row(colour: colour) }
+            let item = byID[known.effectID]
+            return Row(
+                colour: colour, effectID: known.effectID, name: item?.name,
+                text: item?.text, source: known.source.rawValue)
+        }
+        struct Out: Encodable {
+            var seen: [Row]
+            var catalogue: [[String: String]]
+        }
+        // Every pill effect, for the "what did that do?" picker.
+        let catalogue = (bundle?.items ?? [])
+            .filter { $0.kind == .pill }
+            .sorted { $0.name < $1.name }
+            .map { ["id": String($0.id), "name": $0.name] }
+        let out = Out(seen: rows, catalogue: catalogue)
+        return (try? String(data: JSONEncoder().encode(out), encoding: .utf8)) ?? "null"
     }
 
     /// Verdicts for one candidate item against the current build — the "should I take
