@@ -58,6 +58,62 @@ struct IsaacCompanionApp: App {
                         }
                         exit(0)
                     }
+                    // Dev hook: run the updater against the real Releases feed and print
+                    // what happened, without installing anything. Both paths, because a
+                    // refusal that has never been observed is not a guarantee.
+                    if ProcessInfo.processInfo.environment["ISAAC_UPDATE_TEST"] == "1" {
+                        let u = model.updater
+                        func line(_ s: String) {
+                            FileHandle.standardError.write(Data((s + "\n").utf8))
+                        }
+                        line("current version: \(u.currentVersionString)")
+                        await u.check(includePrereleases: true)
+                        guard case .available(let release) = u.state else {
+                            line("RESULT check: \(u.stateJSON())")
+                            exit(1)
+                        }
+                        line("RESULT check: offers \(release.tag)")
+
+                        u.forceHashMismatch = true
+                        await u.download(release)
+                        if case .failed(let why) = u.state {
+                            line("RESULT tampered: refused -- \(why)")
+                        } else {
+                            line("RESULT tampered: INSTALLED A BAD DOWNLOAD -- \(u.stateJSON())")
+                            exit(1)
+                        }
+
+                        u.forceHashMismatch = false
+                        await u.download(release)
+                        guard case .ready(let r) = u.state, let staged = u.staged else {
+                            line("RESULT genuine: \(u.stateJSON())")
+                            exit(1)
+                        }
+                        line("RESULT genuine: verified and staged \(r.tag)")
+
+                        // The signature half. Re-sign a copy of that same verified build
+                        // with a different identity and check it is refused -- the hash
+                        // test above cannot exercise this path, because a build that
+                        // fails the hash never reaches the signature check.
+                        let resigned = URL.temporaryDirectory.appending(
+                            path: "IsaacCompanion-resigned.app", directoryHint: .isDirectory)
+                        try? FileManager.default.removeItem(at: resigned)
+                        try? FileManager.default.copyItem(at: staged, to: resigned)
+                        let sign = Process()
+                        sign.executableURL = URL(filePath: "/usr/bin/codesign")
+                        sign.arguments = ["--force", "--sign", "-", resigned.path]
+                        sign.standardError = FileHandle.nullDevice
+                        try? sign.run()
+                        sign.waitUntilExit()
+                        do {
+                            try u.verifySignature(of: resigned)
+                            line("RESULT resigned: ACCEPTED A DIFFERENT SIGNER")
+                            exit(1)
+                        } catch {
+                            line("RESULT resigned: refused -- \(error.localizedDescription)")
+                        }
+                        exit(0)
+                    }
                     // Debug hook: lets a scan be triggered and inspected without
                     // reaching the window, which is awkward while Isaac owns a
                     // fullscreen Space.

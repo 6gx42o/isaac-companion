@@ -30,6 +30,10 @@ struct WebView: NSViewRepresentable {
         // panel's own picker changes the theme, so the flow works both ways.
         context.coordinator.pushTheme(model.theme, revision: model.themeRevision)
         context.coordinator.push(model.stateJSON())
+        // Updater is @Observable and lives on the model, so a background check landing
+        // invalidates this view -- which is how the settings row learns about a release
+        // nobody asked it to look for. Deduped inside pushUpdate.
+        context.coordinator.pushUpdate()
     }
 
     @MainActor
@@ -58,6 +62,24 @@ struct WebView: NSViewRepresentable {
         func pushPanelGeometry() {
             webView?.evaluateJavaScript(
                 "window.onPanelGeometry(\(PanelController.shared.geometryJSON()))")
+        }
+
+        private var lastUpdateJSON = ""
+
+        func pushUpdate() {
+            var payload = model.updater.stateJSON()
+            // The two preferences live on the model, not the updater, so they survive a
+            // failed check; splice them into the same push rather than adding a second
+            // callback the page would have to keep in sync.
+            payload.removeLast()
+            payload +=
+                ",\"auto\":\(model.updateAuto),\"beta\":\(model.updateChannelBeta)"
+                + ",\"dataStale\":\(model.dataIsStale)}"
+            // updateNSView fires on every SwiftUI invalidation, which is often. Without
+            // this the page would be re-rendering the same status line continuously.
+            guard payload != lastUpdateJSON else { return }
+            lastUpdateJSON = payload
+            webView?.evaluateJavaScript("window.onUpdate(\(payload))")
         }
 
         private func pushIconAtlas(_ name: String) {
@@ -167,6 +189,32 @@ struct WebView: NSViewRepresentable {
                     webView?.evaluateJavaScript(
                         "window.onRebuilt(\(model.buildWarnings.isEmpty))", completionHandler: nil)
                 }
+            case "updateState":
+                pushUpdate()
+            case "checkUpdate":
+                Task { @MainActor in
+                    await model.updater.check(includePrereleases: model.updateChannelBeta)
+                    pushUpdate()
+                }
+            case "downloadUpdate":
+                // Only ever downloads what the last check offered, so the URL is never
+                // taken from the page.
+                guard case .available(let release) = model.updater.state else { return }
+                Task { @MainActor in
+                    await model.updater.download(release)
+                    pushUpdate()
+                }
+            case "installUpdate":
+                model.updater.install(gameIsRunning: model.gameProcessRunning)
+                pushUpdate()
+            case "setUpdateField":
+                if let key = body["key"] as? String {
+                    if key == "auto", let on = body["value"] as? Bool { model.updateAuto = on }
+                    if key == "beta", let on = body["value"] as? Bool {
+                        model.updateChannelBeta = on
+                    }
+                }
+                pushUpdate()
             case "showPanel":
                 PanelController.shared.show(model: model)
                 pushPanelGeometry()

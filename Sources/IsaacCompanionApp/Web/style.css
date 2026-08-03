@@ -3250,3 +3250,9 @@ kbd {
 :root[data-density="compact"] :is(.held, .results) li { padding: 5px 9px; gap: 8px; }
 :root[data-density="compact"] .set-row { padding: 9px 0; }
 :root[data-density="compact"] .stat { padding: 9px 11px; }
+
+/* Update status line. `bad` and `warn` are the two states the updater reports that the
+   user has to act on, so they get colour rather than only words. */
+.set-desc .bad  { color: var(--mark); }
+.set-desc .warn { color: var(--warn); }
+.set-desc .chip { margin-left: 4px; vertical-align: baseline; }

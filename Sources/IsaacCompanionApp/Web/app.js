@@ -10,6 +10,14 @@ const el = (tag, cls, text) => {
   return n;
 };
 
+// For the few places that build markup rather than set textContent. Most of this file
+// uses el(tag, cls, text), which escapes for free; the update panel does not, because it
+// needs a button inside the sentence -- and the version strings and error messages it
+// interpolates come off the network.
+const esc = (s) =>
+  String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
 let catalogue = [];
 let byKey = new Map();
 let atlas = null;
@@ -638,6 +646,9 @@ document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () 
   // asks for fresh geometry rather than trusting whatever it last drew.
   if (t.dataset.tab === "overlay") send({ type: "panelGeometry" });
   if (t.dataset.tab === "bestiary" && !bestiary.length) send({ type: "bestiary" });
+  // Not a fresh check -- just the current state, so the row is never stale-looking
+  // when you open the tab. Checking is on its own schedule.
+  if (t.dataset.tab === "settings") send({ type: "updateState" });
 }));
 
 // ---- unlocks ---------------------------------------------------------------
@@ -2546,7 +2557,96 @@ const SETTINGS = [
         apply: () => send({ type: "rebuildData" }) },
     ],
   },
+
+  {
+    group: "Updates",
+    blurb: "Checking is automatic; installing never is. Nothing is installed that does "
+      + "not match the checksum published with the release and carry the same signature "
+      + "as the copy you are running.",
+    items: [
+      { id: "updateAuto", type: "switch", label: "Check automatically", def: true,
+        desc: "Once shortly after launch, then daily. It only ever checks &#8212; you "
+          + "decide whether to install.",
+        native: true,
+        apply: (v) => send({ type: "setUpdateField", key: "auto", value: v }) },
+
+      { id: "updateBeta", type: "switch", label: "Include pre-releases", def: false,
+        desc: "Offers beta and release-candidate builds too. Off means tagged releases "
+          + "only.",
+        native: true,
+        apply: (v) => send({ type: "setUpdateField", key: "beta", value: v }) },
+
+      { id: "updateCheck", type: "action", label: "Check for updates", action: "Check now",
+        busy: "Checking…",
+        desc: "<span id='update-status'>&#8212;</span>",
+        native: true,
+        apply: () => send({ type: "checkUpdate" }) },
+    ],
+  },
 ];
+
+/* ---- updates ---------------------------------------------------------------
+   One push carries the whole state, so the row below the button is always telling
+   the truth about what the updater is actually doing. The install button only ever
+   appears once a download has been verified. */
+window.onUpdate = (u) => {
+  // The two preferences are Swift's, not localStorage's, so reflect them onto the
+  // switches rather than letting the page keep its own idea of them.
+  for (const [id, val] of [["updateAuto", u.auto], ["updateBeta", u.beta]]) {
+    if (typeof val !== "boolean") continue;
+    setStore[id] = val;
+    const item = SETTINGS.flatMap((g) => g.items).find((i) => i.id === id);
+    if (item && item.node && item.node.type === "checkbox") item.node.checked = val;
+  }
+  const status = $("update-status");
+  const btn = (SETTINGS.flatMap((g) => g.items).find((i) => i.id === "updateCheck") || {}).node;
+  if (btn) { btn.disabled = u.status === "checking" || u.status === "downloading"; }
+  if (btn && u.status !== "checking" && u.status !== "downloading") {
+    btn.textContent = "Check now";
+  }
+  if (!status) return;
+
+  const rel = (t) => {
+    if (!t) return "";
+    const d = Math.round((Date.now() - new Date(t).getTime()) / 60000);
+    if (d < 1) return " Checked just now.";
+    if (d < 60) return ` Checked ${d} min ago.`;
+    return ` Checked ${Math.round(d / 60)} h ago.`;
+  };
+
+  const say = (html) => { status.innerHTML = html; };
+  const ver = esc(u.version || "");
+  switch (u.status) {
+    case "checking": say("Checking…"); break;
+    case "current":
+      say(`You are on <b>${esc(u.current)}</b>, the newest version.${rel(u.lastChecked)}`);
+      break;
+    case "available":
+      say(`<b>${ver}</b> is available (you have ${esc(u.current)}). `
+        + `<button class="chip" id="update-get">Download it</button>`);
+      break;
+    case "downloading":
+      say(`Downloading and verifying… ${Math.round((u.fraction || 0) * 100)}%`);
+      break;
+    case "ready":
+      say(u.waitingForGame
+        ? `<b>${ver}</b> is verified and ready, but Isaac is running &#8212; it will not `
+          + `swap itself out mid-run. Quit the game, then `
+          + `<button class="chip" id="update-go">install it</button>.`
+        : `<b>${ver}</b> is verified and ready. `
+          + `<button class="chip" id="update-go">Install and restart</button>`);
+      break;
+    case "failed": say(`<span class="bad">${esc(u.error || "Update check failed.")}</span>`); break;
+    default:
+      say(`You are on <b>${esc(u.current)}</b>.`);
+  }
+  if (u.dataStale) {
+    status.innerHTML += `<br><span class="warn">The game has been updated since your item `
+      + `data was built, so some numbers may be wrong. Rebuild the data above.</span>`;
+  }
+  const get = $("update-get"); if (get) get.onclick = () => send({ type: "downloadUpdate" });
+  const go = $("update-go"); if (go) go.onclick = () => send({ type: "installUpdate" });
+};
 
 /* Swift answers when the rebuild finishes, so the button can stop saying "Rebuilding". */
 window.onRebuilt = (ok) => {

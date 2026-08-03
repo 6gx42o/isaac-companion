@@ -26,6 +26,44 @@ public final class AppModel {
     public private(set) var buildWarnings: [String] = []
     public private(set) var isRebuilding = false
 
+    public let updater = Updater()
+
+    /// Check for updates on launch and daily thereafter. Checking is automatic;
+    /// installing never is.
+    public var updateAuto: Bool {
+        get { UserDefaults.standard.object(forKey: "updateAuto") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "updateAuto") }
+    }
+
+    public var updateChannelBeta: Bool {
+        get { UserDefaults.standard.bool(forKey: "updateChannelBeta") }
+        set { UserDefaults.standard.set(newValue, forKey: "updateChannelBeta") }
+    }
+
+    /// The other half of "up to date". The item data is built from the user's own game
+    /// install, so a game patch silently invalidates it -- and the symptom is wrong
+    /// numbers, which reads as a bug in the stat engine rather than as stale data.
+    ///
+    /// The game announces its version in the first lines of the log, so the version
+    /// current when the data was last built is recorded and compared. Before the first
+    /// log has been read there is nothing to compare and nothing is claimed.
+    public private(set) var dataIsStale = false
+
+    private var dataGameVersion: String? {
+        get { UserDefaults.standard.string(forKey: "dataGameVersion") }
+        set { UserDefaults.standard.set(newValue, forKey: "dataGameVersion") }
+    }
+
+    /// Called whenever the log tells us which game build is running.
+    func noteGameVersion(_ version: String) {
+        guard let known = dataGameVersion else {
+            // First time we have ever seen one: adopt it rather than cry stale.
+            dataGameVersion = version
+            return
+        }
+        dataIsStale = known != version
+    }
+
     public var storageMode: StorageMode {
         get {
             StorageMode(
@@ -118,6 +156,7 @@ public final class AppModel {
     /// Set when a launch attempt fails, so the page can say why.
     public private(set) var launchError: String?
     private var processTimer: Timer?
+    private var updateTimer: Timer?
 
     /// Before anything reads UserDefaults: the bundle id changed, and the old settings
     /// live under the old one.
@@ -177,6 +216,28 @@ public final class AppModel {
             startTailing()
         } else {
             phase = .needsSetup(nil)
+        }
+        startUpdateChecks()
+    }
+
+    /// One check shortly after launch, then daily. Deliberately not on a tight timer:
+    /// there is nothing to gain from noticing a release within the hour, and a background
+    /// task that wakes constantly is exactly what people mean when they say an app is
+    /// heavy.
+    private func startUpdateChecks() {
+        guard updateAuto else { return }
+        Task { @MainActor [weak self] in
+            // Let the window come up first; a network stall must never delay first paint.
+            try? await Task.sleep(for: .seconds(4))
+            guard let self, self.updateAuto else { return }
+            await self.updater.check(includePrereleases: self.updateChannelBeta)
+        }
+        updateTimer?.invalidate()
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 60 * 60 * 24, repeats: true) { _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.updateAuto else { return }
+                await self.updater.check(includePrereleases: self.updateChannelBeta)
+            }
         }
     }
 
@@ -249,6 +310,10 @@ public final class AppModel {
             }.value
             buildWarnings = report.warnings
             apply(items: items, pools: pools, synergies: synergies)
+            // The data now matches whatever the game currently is, so the staleness
+            // warning is answered rather than merely dismissed.
+            dataGameVersion = run.gameVersion
+            dataIsStale = false
             phase = .ready
             startTailing()
         } catch {
@@ -305,6 +370,7 @@ public final class AppModel {
                 continue
             }
             guard let event = parser.parse(line: line) else { continue }
+            if case .gameVersion(let v) = event { noteGameVersion(v) }
             reducer.apply(event, to: &run)
         }
         recompute()
