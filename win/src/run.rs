@@ -230,6 +230,31 @@ mod tests {
 
     /// Cain's base luck must be 0 -- Lucky Foot is his STARTING item and the log
     /// reports it as an ordinary pickup, so a non-zero base double-counts it.
+    /// characters.tsv is baked from the Swift roster by bake-data.py, which needs the
+    /// game installed -- so CI cannot regenerate it and a stale committed table would
+    /// ship Windows a different stat model from macOS. Cain is the canary: every one of
+    /// his stats was measured against the in-game HUD, so if this row drifts the table
+    /// was not re-baked after a roster change.
+    #[test]
+    fn the_baked_table_matches_the_measured_roster() {
+        let data = Data::load();
+        let cain = data.characters.get(&2).expect("no Cain in the baked table");
+        assert_eq!(cain.name, "Cain");
+        assert!((cain.speed - 1.3).abs() < 1e-6, "speed {}", cain.speed);
+        assert!((cain.range - 17.75).abs() < 1e-6, "range {}", cain.range);
+        assert!(
+            (cain.damage_multiplier - 1.2).abs() < 1e-6,
+            "damage multiplier {}",
+            cain.damage_multiplier
+        );
+        // Keeper is the character with the most non-default stats, so he catches a
+        // partial re-bake that happened to leave Cain alone.
+        let keeper = data.characters.get(&14).expect("no Keeper in the baked table");
+        assert!((keeper.tears - -2.0).abs() < 1e-6, "tears {}", keeper.tears);
+        assert!((keeper.luck - -2.0).abs() < 1e-6, "luck {}", keeper.luck);
+        assert!((keeper.speed - 0.85).abs() < 1e-6, "speed {}", keeper.speed);
+    }
+
     #[test]
     fn character_bases_exclude_starting_items() {
         let data = Data::load();

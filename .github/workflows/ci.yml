@@ -85,7 +85,10 @@ jobs:
             Assert "pedestals" $state.pedestals     1
             # Ipecac through the AB+ damage curve. A wrong number here means the stat
             # model diverged from the Swift one it is meant to mirror.
-            Assert "damage"    $state.damage.value  24.5
+            # Cain + Ipecac. 3.5 * sqrt(40*1.2+1) = 24.5 for Isaac, and Cain carries a
+            # x1.20 damage multiplier, so 29.4. This assertion caught the roster fix
+            # reaching Windows -- it read 24.5 while Cain's multiplier was missing.
+            Assert "damage"    $state.damage.value  29.4
             if ($state.curses -notcontains "Curse of the Blind") {
               throw "curses: expected Curse of the Blind, got '$($state.curses)'"
             }
