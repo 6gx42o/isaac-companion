@@ -3191,11 +3191,19 @@ function renderPills() {
 
     const body = el("div", "pillbody");
     if (row.name) {
-      body.appendChild(el("div", "pillname", row.name));
+      const head = el("div", "pillname", row.name);
+      if (row.held) head.appendChild(el("span", "pill tag", "in your pocket"));
+      body.appendChild(head);
       const why = row.source === "identified" ? "you named it" : "worked out from a stat change";
-      body.appendChild(el("div", "muted small", why));
+      body.appendChild(el("div", "muted small", why + " \u00b7 counted automatically from now on"));
     } else {
-      body.appendChild(el("div", "pillname muted", "Not known yet"));
+      // A pill of this colour has already gone down. Saying so is the difference between
+      // "tell me some time" and "tell me and it gets counted".
+      const label = row.awaiting > 0
+        ? (row.awaiting === 1 ? "You took one — what did it do?"
+                              : "You took " + row.awaiting + " — what did they do?")
+        : "Not known yet";
+      body.appendChild(el("div", row.awaiting > 0 ? "pillname" : "pillname muted", label));
       const pick = el("select", "pillpick");
       pick.appendChild(el("option", null, "What did it do?"));
       for (const p of pillData.catalogue) {

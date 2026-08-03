@@ -531,6 +531,15 @@ public final class AppModel {
                 runStartedAt = Date()
                 pills.reset()          // new run, new shuffle
             }
+            // A pill hit the floor. The player has to walk over and pick it up, so look
+            // at the pocket slot a moment later rather than now.
+            if case .pillSpawned = event { schedulePillRead(after: 2.5) }
+
+            // The pocket slot was used. This is the ONLY moment the log admits a
+            // consumable was swallowed, and by the time it fires the slot is empty --
+            // so the answer is whatever was read from it beforehand.
+            if case .pocketItemUsed = event { recordPillUse() }
+
             reducer.apply(event, to: &run)
         }
         recompute()
@@ -983,6 +992,21 @@ public final class AppModel {
     /// reshuffles the mapping and a carried-over answer would be confidently wrong.
     public private(set) var pills = PillMemory()
 
+    /// The colour sitting in the pocket slot, from the last read of the screen. This is
+    /// what makes "which pill did you just swallow" answerable: the log announces the
+    /// swallow AFTER the slot is empty, so the answer has to have been read before.
+    public private(set) var heldPill: Int?
+
+    /// Colours that were swallowed while their effect was still unknown, in order.
+    /// Naming the colour later applies every one of them retroactively -- otherwise the
+    /// first pill of each colour would be permanently lost from the run's numbers.
+    public private(set) var pillsAwaitingID: [Int] = []
+
+    /// Debounce for the automatic read. A pill spawning is a cue to look at the pocket
+    /// slot shortly afterwards, not to look immediately -- the player has to walk over
+    /// and pick it up first.
+    private var pillReadTask: Task<Void, Never>?
+
     /// Reads the pill in the pocket slot off the screen.
     ///
     /// Auto-detection has a hard ceiling that is worth being honest about: the log says a
@@ -999,16 +1023,59 @@ public final class AppModel {
         do {
             let found = try await scanner.readPills(pillStrip: image)
             for sighting in found { pills.note(colour: sighting.colour) }
+            heldPill = found.first(where: { $0.held })?.colour
             return (found, nil)
         } catch {
             return ([], error.localizedDescription)
         }
     }
 
+    /// Attributes a swallowed pill to whatever colour was last seen in the pocket slot.
+    ///
+    /// If the colour's effect is already known this is fully automatic: the pill enters
+    /// the run and its stat change applies, with nothing asked of anyone. If the colour
+    /// is known but the effect is not, the use is parked until the colour is named.
+    ///
+    /// The log cannot distinguish a pill from a card, so a card use with no pill held is
+    /// correctly ignored rather than guessed at.
+    private func recordPillUse() {
+        guard let colour = heldPill else { return }
+        pills.note(colour: colour)
+        if let known = pills.effect(of: colour) {
+            manualAdd(itemID: known.effectID, kind: .pill)
+        } else {
+            pillsAwaitingID.append(colour)
+        }
+        // The slot is empty now. A second pill needs a fresh look.
+        heldPill = nil
+        schedulePillRead(after: 1.5)
+    }
+
+    /// Reads the pocket slot shortly from now, replacing any read already pending.
+    ///
+    /// Event-driven rather than polled: capture is a real screen grab, and the project's
+    /// rule is that it happens on a trigger, never continuously.
+    private func schedulePillRead(after seconds: Double) {
+        pillReadTask?.cancel()
+        pillReadTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled, let self, self.gameProcessRunning else { return }
+            // Errors are silent on purpose. This is a background convenience; a missing
+            // Screen Recording grant must not spew at someone who never asked for it.
+            _ = await self.scanPills()
+        }
+    }
+
     /// Records what a colour does, from the player. Applies to every pill of that colour
-    /// for the rest of the run.
+    /// for the rest of the run -- and backfills the ones already swallowed.
     public func identifyPill(colour: Int, effectID: Int) {
         pills.learn(colour: colour, effectID: effectID, source: .identified)
+        // Every pill of this colour taken before it had a name. Without this the first
+        // pill of each colour would never reach the run's numbers, which is exactly the
+        // pill you most want counted -- it is the one that told you what the colour does.
+        let owed = pillsAwaitingID.filter { $0 == colour }.count
+        pillsAwaitingID.removeAll { $0 == colour }
+        for _ in 0..<owed { manualAdd(itemID: effectID, kind: .pill) }
     }
 
     public func forgetPill(colour: Int) { pills.forget(colour: colour) }
@@ -1021,27 +1088,37 @@ public final class AppModel {
             var name: String?
             var text: String?
             var source: String?
+            /// How many of this colour were swallowed before it had a name. They land in
+            /// the run the moment it gets one.
+            var awaiting: Int = 0
+            /// Currently in the pocket slot.
+            var held: Bool = false
         }
         let byID = Dictionary(
             uniqueKeysWithValues: (bundle?.items ?? [])
                 .filter { $0.kind == .pill }.map { ($0.id, $0) })
         let rows = pills.seen.map { colour -> Row in
-            guard let known = pills.effect(of: colour) else { return Row(colour: colour) }
+            let swallowed = pillsAwaitingID.filter { $0 == colour }.count
+            guard let known = pills.effect(of: colour) else {
+                return Row(colour: colour, awaiting: swallowed, held: heldPill == colour)
+            }
             let item = byID[known.effectID]
             return Row(
                 colour: colour, effectID: known.effectID, name: item?.name,
-                text: item?.text, source: known.source.rawValue)
+                text: item?.text, source: known.source.rawValue,
+                awaiting: swallowed, held: heldPill == colour)
         }
         struct Out: Encodable {
             var seen: [Row]
             var catalogue: [[String: String]]
+            var held: Int?
         }
         // Every pill effect, for the "what did that do?" picker.
         let catalogue = (bundle?.items ?? [])
             .filter { $0.kind == .pill }
             .sorted { $0.name < $1.name }
             .map { ["id": String($0.id), "name": $0.name] }
-        let out = Out(seen: rows, catalogue: catalogue)
+        let out = Out(seen: rows, catalogue: catalogue, held: heldPill)
         return (try? String(data: JSONEncoder().encode(out), encoding: .utf8)) ?? "null"
     }
 
