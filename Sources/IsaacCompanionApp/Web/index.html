@@ -81,6 +81,24 @@
 
     <div id="build-notes"></div>
 
+    <!-- Off by default. The whole app rests on these seven numbers being right, and
+         they have never been compared against the game's own HUD. -->
+    <section id="verify" hidden>
+      <h2>Against the in-game HUD</h2>
+      <p class="lead">Set <code>FoundHUD=1</code> in <code>options.ini</code>, then type
+        what the game shows next to what this computes. Anything that disagrees by more
+        than a rounding step is a bug in the stat engine, not in your reading of it.</p>
+      <table class="vtable">
+        <thead><tr><th>Stat</th><th>Computed</th><th>The game says</th><th></th></tr></thead>
+        <tbody id="vrows"></tbody>
+      </table>
+      <div class="vactions">
+        <button class="chip" id="v-copy">Copy a report</button>
+        <button class="chip" id="v-clear">Clear</button>
+        <span class="vhint" id="v-hint"></span>
+      </div>
+    </section>
+
     <h2>Considering a pedestal?</h2>
     <p class="muted small">The log knows a pedestal is there but not what's on it.
       Read it off the screen, or just name it.</p>

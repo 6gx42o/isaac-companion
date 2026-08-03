@@ -857,6 +857,10 @@ try { applyTheme(localStorage.getItem("theme") || "devil"); } catch (e) { applyT
 const seenUIDs = new Set();
 const deadUIDs = new Set();
 let lastStats = {};
+// The whole last push, kept because lastStats is a side-effect of RENDERING the six
+// stat cards -- tear delay is computed but never drawn, so it is absent from there. A
+// comparison table must read the data, not what the UI happened to paint.
+let lastState = null;
 let firstRender = true;
 let lastSeed = null;
 
@@ -1299,6 +1303,7 @@ function renderBuildNotes(state) {
 }
 
 window.onState = (state) => {
+  lastState = state;
   // Every character has non-zero base stats, so rendering them with no run in
   // progress prints a plausible-looking readout of nothing. Only claim a character
   // once the log has actually named one.
@@ -1373,6 +1378,8 @@ window.onState = (state) => {
   renderStats(state);
   renderHeld(state);
   firstRender = false;
+  // Keep the HUD comparison in step with the live numbers.
+  if (verifyOn) renderVerify();
 };
 
 // ---- manual add ----------------------------------------------------------
@@ -2577,6 +2584,12 @@ const SETTINGS = [
         native: true,
         apply: (v) => send({ type: "setUpdateField", key: "beta", value: v }) },
 
+      { id: "verifyHUD", type: "switch", label: "Compare against the in-game HUD", def: false,
+        desc: "Adds a table to the Run tab for typing in what Isaac's own HUD shows, next "
+          + "to what this computes. Needs <code>FoundHUD=1</code> in your "
+          + "<code>options.ini</code>. Off unless you are checking the numbers.",
+        apply: (v) => { verifyOn = v; renderVerify(); } },
+
       { id: "updateCheck", type: "action", label: "Check for updates", action: "Check now",
         busy: "Checking…",
         desc: "<span id='update-status'>&#8212;</span>",
@@ -2941,5 +2954,128 @@ window.onHistory = (data) => {
   if (clear) clear.onclick = () => {
     if (confirm("Delete every run from your history? This cannot be undone."))
       send({ type: "deleteAllRuns" });
+  };
+}
+
+/* ---- comparing against the in-game HUD -------------------------------------
+   The app's whole claim is that these seven numbers are your real ones, and they
+   came from a mod's data files rather than from the game. Nothing here has ever
+   been checked against what Isaac itself displays.
+
+   The tolerance per stat is the game's own display precision, not an arbitrary
+   epsilon: the HUD rounds, so agreeing to within half a displayed step is
+   agreement, and anything wider is a real disagreement worth chasing. */
+// The key is what Swift actually sends, which for tear delay is "delay" -- "tearDelay"
+// is the Swift-side property name and using it here meant that row silently never
+// populated. Exactly the sort of quiet nothing this table exists to catch.
+//
+// `onHUD` marks the six the game itself displays. Isaac's HUD has no tear-delay
+// readout: delay is what the model computes internally and tears/second is what you
+// see, so delay is shown for context and not compared against anything.
+const VERIFY_ROWS = [
+  { key: "damage", label: "Damage", tol: 0.05, onHUD: true },
+  { key: "tears", label: "Tears/s", tol: 0.05, onHUD: true },
+  { key: "range", label: "Range", tol: 0.5, onHUD: true },
+  { key: "shotSpeed", label: "Shot speed", tol: 0.05, onHUD: true },
+  { key: "speed", label: "Speed", tol: 0.005, onHUD: true },
+  { key: "luck", label: "Luck", tol: 0.05, onHUD: true },
+  { key: "delay", label: "Tear delay", tol: 0.5, onHUD: false },
+];
+
+let verifyOn = false;
+const hudValues = {};
+
+function renderVerify() {
+  const host = $("vrows");
+  const box = $("verify");
+  if (!host || !box) return;
+  box.hidden = !verifyOn;
+  if (!verifyOn) return;
+
+  host.replaceChildren(...VERIFY_ROWS.map(({ key, label, tol, onHUD }) => {
+    const tr = el("tr");
+    tr.appendChild(el("td", null, label));
+
+    const computed = lastState?.stats?.[key]?.value ?? null;
+    tr.appendChild(el("td", "num", computed == null ? "—" : fmt(computed)));
+
+    const td = el("td");
+    if (onHUD) {
+      const input = el("input");
+      input.type = "text";
+      input.inputMode = "decimal";
+      input.placeholder = "HUD";
+      input.value = hudValues[key] ?? "";
+      input.addEventListener("input", () => {
+        hudValues[key] = input.value;
+        paintVerdict(tr, key, tol, computed, input.value);
+      });
+      td.appendChild(input);
+    } else {
+      td.appendChild(el("span", "vwait", "not on the HUD"));
+    }
+    tr.appendChild(td);
+
+    tr.appendChild(el("td"));
+    if (onHUD) paintVerdict(tr, key, tol, computed, hudValues[key] ?? "");
+    return tr;
+  }));
+}
+
+function paintVerdict(tr, key, tol, computed, typed) {
+  const cell = tr.lastChild;
+  const n = parseFloat(typed);
+  if (computed == null || typed === "" || Number.isNaN(n)) {
+    cell.replaceChildren(el("span", "vwait", "—"));
+    return;
+  }
+  const diff = Math.abs(n - computed);
+  cell.replaceChildren(
+    diff <= tol
+      ? el("span", "vok", "matches")
+      : el("span", "vbad", "off by " + fmt(diff)));
+}
+
+/* A report worth pasting somewhere, rather than a screenshot of a table. */
+function verifyReport() {
+  const lines = ["Isaac Companion — stats vs the in-game HUD", ""];
+  lines.push("character: " + ($("character")?.textContent || "?"));
+  lines.push("seed: " + ($("seed")?.textContent || "?"));
+  const names = [...document.querySelectorAll(".held li .name")].map((n) => n.textContent);
+  if (names.length) lines.push("build: " + names.join(", "));
+  lines.push("");
+  for (const { key, label, tol, onHUD } of VERIFY_ROWS) {
+    const computed = lastState?.stats?.[key]?.value ?? null;
+    const typed = hudValues[key];
+    const n = parseFloat(typed);
+    let verdict = onHUD ? "not compared" : "derived, not on the HUD";
+    if (computed != null && typed && !Number.isNaN(n)) {
+      const diff = Math.abs(n - computed);
+      verdict = diff <= tol ? "matches" : "MISMATCH by " + fmt(diff);
+    }
+    lines.push(
+      label.padEnd(12)
+      + "computed " + (computed == null ? "—" : fmt(computed)).padEnd(10)
+      + "hud " + (typed || "—").padEnd(10) + verdict);
+  }
+  return lines.join("\n");
+}
+
+{
+  const copy = $("v-copy");
+  if (copy) copy.onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(verifyReport());
+      const hint = $("v-hint");
+      if (hint) { hint.textContent = "Copied."; setTimeout(() => (hint.textContent = ""), 2500); }
+    } catch (e) {
+      const hint = $("v-hint");
+      if (hint) hint.textContent = "Could not copy: " + e;
+    }
+  };
+  const clear = $("v-clear");
+  if (clear) clear.onclick = () => {
+    for (const { key } of VERIFY_ROWS) delete hudValues[key];
+    renderVerify();
   };
 }
