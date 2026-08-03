@@ -35,6 +35,18 @@ final class RoomScanner {
         var held: Bool
     }
 
+    /// What is in the pocket slot.
+    ///
+    /// A card is a complete answer the moment it is seen -- its face IS its identity and
+    /// the game never reshuffles it, unlike pill colours. A pill is only half an answer.
+    enum Pocket: Equatable {
+        /// Usually one id. More than one when the game ships no art that tells them
+        /// apart -- Blank Rune and Black Rune are the same sprite -- in which case
+        /// saying "one of these" is the only honest answer.
+        case card(ids: [Int], confidence: Double)
+        case pill(colour: Int, confidence: Double)
+    }
+
     enum ScanError: LocalizedError {
         case noPermission
         case gameWindowNotFound
@@ -60,7 +72,8 @@ final class RoomScanner {
     private var templateSide = 32
 
     /// Builds normalised templates once, from the same atlas the UI draws.
-    private var pillReader: PillReader?
+    private var pillReader: SpriteColourReader?
+    private var cardReader: SpriteColourReader?
 
     func loadTemplates(items: [Item]) throws {
         guard let index = Pipeline.loadAtlasIndex(),
@@ -229,7 +242,7 @@ final class RoomScanner {
     /// moves with the window size and the HUD's own scaling, and a hardcoded rectangle is
     /// one display change away from reading empty floor.
     func readPills(pillStrip: CGImage) async throws -> [PillSighting] {
-        if pillReader == nil { pillReader = PillReader(strip: pillStrip) }
+        if pillReader == nil { pillReader = SpriteColourReader(strip: pillStrip) }
         guard let reader = pillReader else { throw ScanError.noAtlas }
 
         let shot = try await captureGameWindow()
@@ -265,6 +278,87 @@ final class RoomScanner {
             }
         }
         return found
+    }
+
+    /// Builds one colour template per card face, from the same atlas the UI draws.
+    private func loadCardTemplates(items: [Item]) {
+        guard cardReader == nil else { return }
+        guard let index = Pipeline.loadAtlasIndex(),
+              let data = try? Data(
+                contentsOf: DataPaths.dataDir(.abplus).appending(path: "atlas.png")),
+              let atlas = NSImage(data: data)?
+                .cgImage(forProposedRect: nil, context: nil, hints: nil)
+        else { return }
+
+        let byGfx = Dictionary(
+            items.filter { $0.kind == .card && !$0.gfx.isEmpty }
+                .map { ($0.gfx.lowercased(), $0.id) },
+            uniquingKeysWith: { a, _ in a })
+
+        let sprites: [(id: Int, image: CGImage)] = index.entries.compactMap { entry in
+            guard let id = byGfx[entry.key.lowercased()],
+                  let crop = atlas.cropping(
+                    to: CGRect(x: entry.x, y: entry.y, width: entry.w, height: entry.h))
+            else { return nil }
+            return (id, crop)
+        }
+        cardReader = SpriteColourReader(
+            side: SpriteColourReader.cardSide, sprites: sprites)
+    }
+
+    /// Reads whatever is in the pocket slot -- a card or a pill.
+    ///
+    /// Both are searched and the better score wins, because the slot holds one or the
+    /// other and the app cannot know which from the log. A card that scores 0.94 beats a
+    /// pill that scores 0.85 and vice versa; if neither clears the floor, the honest
+    /// answer is that the slot looks empty.
+    func readPocket(pillStrip: CGImage, items: [Item]) async throws -> Pocket? {
+        if pillReader == nil {
+            pillReader = SpriteColourReader(
+                strip: pillStrip, side: SpriteColourReader.pillSide)
+        }
+        loadCardTemplates(items: items)
+        guard pillReader != nil || cardReader != nil else { throw ScanError.noAtlas }
+
+        let shot = try await captureGameWindow()
+        let debug = ProcessInfo.processInfo.environment["ISAAC_SCAN_DEBUG"] == "1"
+        if debug { Self.dump(shot, name: "pocket-full") }
+
+        // The game letterboxes a 480x270 field into the window, so on-screen sprite size
+        // follows the same scale the room geometry already uses.
+        let scale = min(CGFloat(shot.width) / 480, CGFloat(shot.height) / 270)
+        let cornerW = min(shot.width, Int(120 * scale))
+        let cornerH = min(shot.height, Int(90 * scale))
+        guard let corner = shot.cropping(
+            to: CGRect(x: 0, y: shot.height - cornerH, width: cornerW, height: cornerH))
+        else { return nil }
+        if debug { Self.dump(corner, name: "pocket-slot") }
+
+        var best: Pocket?
+        var bestScore = 0.0
+
+        // Cards are drawn larger than pills in the slot.
+        if let reader = cardReader,
+           let hit = reader.best(in: corner, window: max(14, Int((20 * scale).rounded())), stride: 2),
+           hit.match.score > bestScore {
+            bestScore = hit.match.score
+            // Re-read the winning window to collect anything indistinguishable from it.
+            var ids = [hit.match.index]
+            if let crop = corner.cropping(to: hit.rect),
+               let (rgb, _) = SpriteColourReader.rgba(crop, side: reader.side) {
+                let tied = reader.ranked(candidate: rgb).best.map(\.index)
+                if tied.count > 1 { ids = tied.sorted() }
+            }
+            best = .card(ids: ids, confidence: hit.match.score)
+        }
+        if let reader = pillReader,
+           let hit = reader.best(in: corner, window: max(12, Int((16 * scale).rounded())), stride: 2),
+           hit.match.score > bestScore {
+            bestScore = hit.match.score
+            best = .pill(colour: hit.match.index, confidence: hit.match.score)
+        }
+        if debug { log("pocket -> \(best.map { "\($0)" } ?? "nothing")") }
+        return best
     }
 
     /// Writes an image to the scratch dir so a failing scan can actually be looked at.

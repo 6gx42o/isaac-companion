@@ -255,17 +255,23 @@ struct WebView: NSViewRepresentable {
                 pushPanelGeometry()
             case "togglePanel":
                 PanelController.shared.toggle(model: model)
-            case "scanPills":
+            case "scanPocket", "scanPills":
                 Task { @MainActor in
-                    let result = await model.scanPills()
-                    let json = result.found
-                        .map { "{\"colour\":\($0.colour),\"confidence\":\($0.confidence),"
-                                + "\"held\":\($0.held)}" }
-                        .joined(separator: ",")
+                    let result = await model.scanPocket()
+                    let what: String
+                    switch result.found {
+                    case .card(let id, let confidence):
+                        what = "{\"kind\":\"card\",\"id\":\(id),\"confidence\":\(confidence)}"
+                    case .pill(let colour, let confidence):
+                        what = "{\"kind\":\"pill\",\"colour\":\(colour),"
+                            + "\"confidence\":\(confidence)}"
+                    case nil:
+                        what = "null"
+                    }
                     let err = result.error.map { "\"\($0.replacingOccurrences(of: "\"", with: "'"))\"" }
                         ?? "null"
                     self.webView?.evaluateJavaScript(
-                        "window.onPillScan({\"found\":[\(json)],\"error\":\(err)})",
+                        "window.onPocketScan({\"found\":\(what),\"error\":\(err)})",
                         completionHandler: nil)
                     self.pushPills()
                 }

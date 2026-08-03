@@ -533,12 +533,12 @@ public final class AppModel {
             }
             // A pill hit the floor. The player has to walk over and pick it up, so look
             // at the pocket slot a moment later rather than now.
-            if case .pillSpawned = event { schedulePillRead(after: 2.5) }
+            if case .pillSpawned = event { schedulePocketRead(after: 2.5) }
 
             // The pocket slot was used. This is the ONLY moment the log admits a
             // consumable was swallowed, and by the time it fires the slot is empty --
             // so the answer is whatever was read from it beforehand.
-            if case .pocketItemUsed = event { recordPillUse() }
+            if case .pocketItemUsed = event { recordPocketUse() }
 
             reducer.apply(event, to: &run)
         }
@@ -997,6 +997,16 @@ public final class AppModel {
     /// swallow AFTER the slot is empty, so the answer has to have been read before.
     public private(set) var heldPill: Int?
 
+    /// The card in the pocket slot, from the same read. Unlike a pill colour this is a
+    /// complete answer on sight -- a card's face IS its identity and the game never
+    /// reshuffles it, so there is nothing to learn and nothing to ask.
+    public private(set) var heldCard: Int?
+    /// Every card the sprite could be. Longer than one only where the game ships no art
+    /// that separates them (Blank Rune / Black Rune), and the UI says so rather than
+    /// picking.
+    public private(set) var heldCardAlternatives: [Int] = []
+    public private(set) var heldCardConfidence: Double = 0
+
     /// Colours that were swallowed while their effect was still unknown, in order.
     /// Naming the colour later applies every one of them retroactively -- otherwise the
     /// first pill of each colour would be permanently lost from the run's numbers.
@@ -1014,19 +1024,38 @@ public final class AppModel {
     /// screen gives the COLOUR and nothing else. What the colour does is reshuffled every
     /// run. So this identifies the colour automatically, and the effect is learned once
     /// per colour and then applied for the rest of the run without asking again.
-    func scanPills() async -> (found: [RoomScanner.PillSighting], error: String?) {
+    func scanPocket() async -> (found: RoomScanner.Pocket?, error: String?) {
         let stripURL = DataPaths.dataDir(.abplus).appending(path: "pills.png")
         guard let data = try? Data(contentsOf: stripURL),
               let image = NSImage(data: data)?
                 .cgImage(forProposedRect: nil, context: nil, hints: nil)
-        else { return ([], "No pill sprites — rebuild the data.") }
+        else { return (nil, "No pill sprites — rebuild the data.") }
         do {
-            let found = try await scanner.readPills(pillStrip: image)
-            for sighting in found { pills.note(colour: sighting.colour) }
-            heldPill = found.first(where: { $0.held })?.colour
+            let found = try await scanner.readPocket(
+                pillStrip: image, items: bundle?.items ?? [])
+            // Exactly one of the two, so the other must be cleared -- otherwise a card
+            // picked up after a pill would leave the app believing both are held.
+            switch found {
+            case .card(let ids, let confidence):
+                heldCard = ids.first
+                heldCardAlternatives = ids
+                heldCardConfidence = confidence
+                heldPill = nil
+            case .pill(let colour, _):
+                pills.note(colour: colour)
+                heldPill = colour
+                heldCard = nil
+                heldCardAlternatives = []
+                heldCardConfidence = 0
+            case nil:
+                heldPill = nil
+                heldCard = nil
+                heldCardAlternatives = []
+                heldCardConfidence = 0
+            }
             return (found, nil)
         } catch {
-            return ([], error.localizedDescription)
+            return (nil, error.localizedDescription)
         }
     }
 
@@ -1038,7 +1067,18 @@ public final class AppModel {
     ///
     /// The log cannot distinguish a pill from a card, so a card use with no pill held is
     /// correctly ignored rather than guessed at.
-    private func recordPillUse() {
+    private func recordPocketUse() {
+        // A card is unambiguous the moment it was seen, so it just goes in.
+        // Only record it when the sprite named exactly one card. An ambiguous pair
+        // would otherwise enter the run as a coin flip.
+        if let card = heldCard, heldCardAlternatives.count <= 1 {
+            manualAdd(itemID: card, kind: .card)
+            heldCard = nil
+            heldCardAlternatives = []
+            heldCardConfidence = 0
+            schedulePocketRead(after: 1.5)
+            return
+        }
         guard let colour = heldPill else { return }
         pills.note(colour: colour)
         if let known = pills.effect(of: colour) {
@@ -1048,21 +1088,21 @@ public final class AppModel {
         }
         // The slot is empty now. A second pill needs a fresh look.
         heldPill = nil
-        schedulePillRead(after: 1.5)
+        schedulePocketRead(after: 1.5)
     }
 
     /// Reads the pocket slot shortly from now, replacing any read already pending.
     ///
     /// Event-driven rather than polled: capture is a real screen grab, and the project's
     /// rule is that it happens on a trigger, never continuously.
-    private func schedulePillRead(after seconds: Double) {
+    private func schedulePocketRead(after seconds: Double) {
         pillReadTask?.cancel()
         pillReadTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(seconds))
             guard !Task.isCancelled, let self, self.gameProcessRunning else { return }
             // Errors are silent on purpose. This is a background convenience; a missing
             // Screen Recording grant must not spew at someone who never asked for it.
-            _ = await self.scanPills()
+            _ = await self.scanPocket()
         }
     }
 
@@ -1108,17 +1148,39 @@ public final class AppModel {
                 text: item?.text, source: known.source.rawValue,
                 awaiting: swallowed, held: heldPill == colour)
         }
+        struct CardRow: Encodable {
+            var id: Int
+            var name: String
+            var text: String
+            var confidence: Double
+            var gfx: String
+            /// Non-empty when the sprite cannot separate two cards. Both are named.
+            var alternatives: [String]
+        }
         struct Out: Encodable {
             var seen: [Row]
             var catalogue: [[String: String]]
             var held: Int?
+            /// The card in the pocket slot, named outright -- no learning step.
+            var card: CardRow?
         }
+        let byID2 = Dictionary(
+            uniqueKeysWithValues: (bundle?.items ?? [])
+                .filter { $0.kind == .card }.map { ($0.id, $0) })
         // Every pill effect, for the "what did that do?" picker.
         let catalogue = (bundle?.items ?? [])
             .filter { $0.kind == .pill }
             .sorted { $0.name < $1.name }
             .map { ["id": String($0.id), "name": $0.name] }
-        let out = Out(seen: rows, catalogue: catalogue, held: heldPill)
+        let out = Out(
+            seen: rows, catalogue: catalogue, held: heldPill,
+            card: heldCard.flatMap { id in byID2[id].map {
+                CardRow(
+                    id: id, name: $0.name, text: $0.text,
+                    confidence: heldCardConfidence, gfx: $0.gfx,
+                    alternatives: heldCardAlternatives.count > 1
+                        ? heldCardAlternatives.compactMap { byID2[$0]?.name } : [])
+            } })
         return (try? String(data: JSONEncoder().encode(out), encoding: .utf8)) ?? "null"
     }
 

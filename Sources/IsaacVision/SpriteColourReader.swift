@@ -1,22 +1,21 @@
 import CoreGraphics
 import Foundation
 
-/// Names the pill in the pocket slot by its colour.
+/// Identifies a small sprite by its colours -- the pill or the card in the pocket slot.
 ///
 /// Deliberately not SpriteMatcher. That compares shape through zero-mean normalised
-/// cross-correlation on grayscale, which is exactly the wrong tool here: all thirteen
-/// pills are the same capsule, and subtracting the mean and dividing by the norm throws
-/// away the only thing that tells them apart. Two pills that differ solely in hue score
-/// identically under NCC.
+/// cross-correlation on grayscale, and for both of these jobs colour IS the signal:
 ///
-/// So this compares colour directly, per pixel, over the template's own alpha mask --
-/// the background behind the sprite is whatever room the player is standing in and must
-/// not be part of the comparison.
+///  - All thirteen pills are the same capsule. Subtracting the mean and dividing by the
+///    norm throws away the only thing that tells them apart, so two pills differing
+///    solely in hue score identically under NCC.
+///  - Cards differ by artwork, but the pairs most easily confused differ by colour --
+///    2 of Hearts against 2 of Spades is the same pip in red and black.
 ///
-/// What this can and cannot know: it reads the pill's COLOUR. Which effect that colour
-/// carries is reshuffled by the game every run and is written down nowhere the app can
-/// reach, so the colour is the answer, and the effect has to be learned once per run.
-public struct PillReader: Sendable {
+/// So this compares colour directly, per pixel, over the template's own alpha mask: the
+/// background behind the sprite is whatever room the player is standing in, and must not
+/// be part of the comparison.
+public struct SpriteColourReader: Sendable {
 
     /// One pill colour, prepared once.
     public struct Template: Sendable {
@@ -39,22 +38,38 @@ public struct PillReader: Sendable {
     }
 
     /// Below this, say nothing. An empty pocket slot and a dark room both produce a
-    /// best-of-thirteen that means nothing, and naming a pill wrongly is worse than
-    /// naming none -- the whole point is to stop the player guessing.
+    /// best-of-N that means nothing, and naming the wrong card is worse than naming none
+    /// -- the whole point is to stop the player guessing.
     public static let confidenceFloor = 0.82
 
-    /// Templates are square; this is their side in pixels. Small on purpose: pill sprites
-    /// are a handful of flat colour blocks, so more resolution adds cost and no signal.
-    public static let side = 16
+    /// Templates are square; this is their side in pixels. Pills are a handful of flat
+    /// colour blocks and need very little; cards carry actual artwork and need more.
+    /// Pills: flat colour blocks, so very little resolution is needed.
+    public static let pillSide = 16
+    /// Cards: real artwork, and the confusable pairs differ in small details.
+    public static let cardSide = 28
 
+    public let side: Int
     public let templates: [Template]
 
-    public init(templates: [Template]) {
+    public init(side: Int, templates: [Template]) {
+        self.side = side
         self.templates = templates
     }
 
-    /// Slices the harvested strip (one row of square cells) into one template per colour.
-    public init?(strip: CGImage) {
+    /// Builds from arbitrary sprites, keyed by whatever id the caller wants back --
+    /// a card id, a pill colour index.
+    public init?(side: Int, sprites: [(id: Int, image: CGImage)]) {
+        let built = sprites.compactMap {
+            Self.template(index: $0.id, from: $0.image, side: side)
+        }
+        guard !built.isEmpty else { return nil }
+        self.side = side
+        self.templates = built
+    }
+
+    /// Slices a harvested strip (one row of square cells) into one template per cell.
+    public init?(strip: CGImage, side: Int = 16) {
         let h = strip.height
         guard h > 0, strip.width % h == 0 else { return nil }
         let count = strip.width / h
@@ -62,16 +77,17 @@ public struct PillReader: Sendable {
         for i in 0..<count {
             guard let cell = strip.cropping(
                 to: CGRect(x: i * h, y: 0, width: h, height: h)),
-                let t = Self.template(index: i, from: cell)
+                let t = Self.template(index: i, from: cell, side: side)
             else { continue }
             built.append(t)
         }
         guard !built.isEmpty else { return nil }
+        self.side = side
         self.templates = built
     }
 
-    static func template(index: Int, from image: CGImage) -> Template? {
-        guard let (rgb, alpha) = Self.rgba(image, side: Self.side) else { return nil }
+    static func template(index: Int, from image: CGImage, side: Int) -> Template? {
+        guard let (rgb, alpha) = Self.rgba(image, side: side) else { return nil }
         let mask = alpha.map { $0 > 0.5 }
         let opaque = mask.filter { $0 }.count
         // A cell that is entirely transparent would match any background perfectly.
@@ -129,9 +145,24 @@ public struct PillReader: Sendable {
         .sorted { $0.score > $1.score }
     }
 
+    /// The best match plus anything indistinguishable from it.
+    ///
+    /// Two sprites can be byte-identical -- Blank Rune and Black Rune ship no distinct
+    /// art in Afterbirth+, so both fall back to the same generic card pickup. Picking one
+    /// at random would state a coin flip as fact. Returning both lets the caller say
+    /// "one of these two", which is the true answer.
+    public func ranked(candidate: [SIMD3<Float>], tieWithin: Double = 1e-6)
+        -> (best: [Match], runnerUp: Match?)
+    {
+        let all = scores(candidate: candidate)
+        guard let top = all.first else { return ([], nil) }
+        let tied = all.prefix { top.score - $0.score <= tieWithin }
+        return (Array(tied), all.dropFirst(tied.count).first)
+    }
+
     /// Reads a tight crop -- one pill, filling the frame.
     public func match(_ crop: CGImage) -> Match? {
-        guard let (rgb, _) = Self.rgba(crop, side: Self.side) else { return nil }
+        guard let (rgb, _) = Self.rgba(crop, side: side) else { return nil }
         guard let best = scores(candidate: rgb).first,
               best.score >= Self.confidenceFloor else { return nil }
         return best
@@ -144,7 +175,7 @@ public struct PillReader: Sendable {
     /// rectangle that is one patch away from being wrong.
     ///
     /// - Parameter window: the side of the search window, in `haystack` pixels. Should be
-    ///   roughly the on-screen size of a pill.
+    ///   roughly the on-screen size of the sprite being looked for.
     public func best(in haystack: CGImage, window: Int, stride: Int = 2)
         -> (match: Match, rect: CGRect)?
     {
@@ -155,7 +186,7 @@ public struct PillReader: Sendable {
             for x in Swift.stride(from: 0, through: haystack.width - window, by: stride) {
                 let rect = CGRect(x: x, y: y, width: window, height: window)
                 guard let crop = haystack.cropping(to: rect),
-                      let (rgb, _) = Self.rgba(crop, side: Self.side),
+                      let (rgb, _) = Self.rgba(crop, side: side),
                       let top = scores(candidate: rgb).first
                 else { continue }
                 if bestFound == nil || top.score > bestFound!.match.score {

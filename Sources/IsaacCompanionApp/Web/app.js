@@ -3180,8 +3180,29 @@ function renderPills() {
   const host = document.getElementById("pill-list");
   if (!host) return;
   host.textContent = "";
+
+  // A card in the slot is a finished answer -- no colour to learn, no question to ask.
+  if (pillData.card) {
+    const line = el("div", "pillrow");
+    // sprite() reads the item atlas by gfx name, the same way every item row does.
+    const art = sprite(pillData.card.gfx || ("card_" + pillData.card.id + ".png"), 1);
+    if (art) line.appendChild(art);
+    const body = el("div", "pillbody");
+    const alts = pillData.card.alternatives || [];
+    // The game ships no art separating Blank Rune from Black Rune, so where the sprite
+    // cannot decide, say both rather than pick -- picking would state a coin flip.
+    const head = el("div", "pillname", alts.length > 1 ? alts.join(" or ") : pillData.card.name);
+    head.appendChild(el("span", "pill tag", "in your pocket"));
+    body.appendChild(head);
+    body.appendChild(el("div", "muted small", alts.length > 1
+      ? "the game draws these two identically, so this can't tell them apart"
+      : "read off the screen \u00b7 " + Math.round(pillData.card.confidence * 100) + "% sure"));
+    line.appendChild(body);
+    host.appendChild(line);
+  }
+
   if (!pillData.seen.length) {
-    host.appendChild(el("p", "muted small", "No pills seen yet this run."));
+    if (!pillData.card) host.appendChild(el("p", "muted small", "No pills seen yet this run."));
     return;
   }
   for (const row of pillData.seen) {
@@ -3233,21 +3254,20 @@ window.onPills = (data) => {
   renderPills();
 };
 
-window.onPillScan = (result) => {
+window.onPocketScan = (result) => {
   const status = document.getElementById("pill-status");
   if (!status) return;
   if (result.error) { status.textContent = result.error; return; }
-  if (!result.found || !result.found.length) {
-    status.textContent = "No pill in the pocket slot.";
-    return;
-  }
-  const held = result.found[0];
-  status.textContent =
-    "Found a pill — " + Math.round(held.confidence * 100) + "% sure of the colour.";
+  if (!result.found) { status.textContent = "Nothing in the pocket slot."; return; }
+  const pct = Math.round(result.found.confidence * 100) + "%";
+  status.textContent = result.found.kind === "card"
+    // A card is named outright: its face is its identity and the game never reshuffles it.
+    ? "Card read — " + pct + " sure."
+    : "Pill read — " + pct + " sure of the colour.";
 };
 
 document.getElementById("pill-scan")?.addEventListener("click", () => {
   const status = document.getElementById("pill-status");
   if (status) status.textContent = "Looking…";
-  send({ type: "scanPills" });
+  send({ type: "scanPocket" });
 });

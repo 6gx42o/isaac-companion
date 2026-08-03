@@ -20,13 +20,13 @@ private func loadStrip() -> CGImage? {
 
 private let strip = loadStrip()
 
-@Suite("PillReader", .enabled(if: strip != nil, "no built data on this machine"))
-struct PillReaderTests {
+@Suite("SpriteColourReader", .enabled(if: strip != nil, "no built data on this machine"))
+struct SpriteColourReaderTests {
 
     @Test("the strip yields one template per colour")
     func slices() throws {
         let sheet = try #require(strip)
-        let reader = try #require(PillReader(strip: sheet))
+        let reader = try #require(SpriteColourReader(strip: sheet))
         #expect(reader.templates.count == 13, "AB+ deals thirteen pill colours")
         for t in reader.templates {
             #expect(t.opaqueCount > 8, "colour \(t.index) is nearly empty")
@@ -39,13 +39,13 @@ struct PillReaderTests {
     @Test("every colour identifies as itself, with daylight to the runner-up")
     func eachColourIsItself() throws {
         let full = try #require(strip)
-        let reader = try #require(PillReader(strip: full))
+        let reader = try #require(SpriteColourReader(strip: full))
         let cell = full.height
 
         for i in 0..<reader.templates.count {
             let crop = try #require(
                 full.cropping(to: CGRect(x: i * cell, y: 0, width: cell, height: cell)))
-            let prepared = PillReader.rgba(crop, side: PillReader.side)
+            let prepared = SpriteColourReader.rgba(crop, side: SpriteColourReader.pillSide)
             let rgb = try #require(prepared?.0, "could not read colour \(i)")
             let ranked = reader.scores(candidate: rgb)
 
@@ -65,7 +65,7 @@ struct PillReaderTests {
     @Test("finds a pill placed in a larger frame")
     func findsInAFrame() throws {
         let full = try #require(strip)
-        let reader = try #require(PillReader(strip: full))
+        let reader = try #require(SpriteColourReader(strip: full))
         let cell = full.height
         let wanted = 6
 
@@ -96,7 +96,7 @@ struct PillReaderTests {
     @Test("plain floor is not a pill")
     func emptyFrameSaysNothing() throws {
         let sheet = try #require(strip)
-        let reader = try #require(PillReader(strip: sheet))
+        let reader = try #require(SpriteColourReader(strip: sheet))
         let W = 120, H = 90
         let made = CGContext(
             data: nil, width: W, height: H, bitsPerComponent: 8, bytesPerRow: W * 4,
