@@ -139,3 +139,44 @@ struct RunReducerTests {
         #expect(s.curses == ["Curse of the Labyrinth"])
     }
 }
+
+@Suite("RunReducer - repeated seeds")
+struct RepeatedSeedTests {
+    @Test("The same seed announced twice does not wipe the build")
+    func sameSeedKeepsTheRun() {
+        // The Swift and Rust reducers disagreed here: Rust guarded on the seed being
+        // different, Swift reset unconditionally. Swift's version was the riskier one --
+        // a repeated seed line silently emptied the build and every stat after it was
+        // wrong. It also decides when a run is archived, so resetting on a repeat filed
+        // the same run twice.
+        var state = RunState()
+        var reducer = RunReducer()
+        for event in LogParser().parse(lines: """
+            RNG Start Seed: ML3H JVH2 (12345)
+            Initialized player with Variant 0 and Subtype 2
+            Adding collectible 1 (The Sad Onion)
+            Adding collectible 149 (Ipecac)
+            RNG Start Seed: ML3H JVH2 (12345)
+            """) {
+            reducer.apply(event, to: &state)
+        }
+        #expect(state.seed == "ML3H JVH2")
+        #expect(state.items.map(\.name) == ["The Sad Onion", "Ipecac"])
+        #expect(state.playerType == 2)
+    }
+
+    @Test("A different seed still starts a clean run")
+    func differentSeedResets() {
+        var state = RunState()
+        var reducer = RunReducer()
+        for event in LogParser().parse(lines: """
+            RNG Start Seed: ML3H JVH2 (12345)
+            Adding collectible 1 (The Sad Onion)
+            RNG Start Seed: 8LV7 AYCP (999)
+            """) {
+            reducer.apply(event, to: &state)
+        }
+        #expect(state.seed == "8LV7 AYCP")
+        #expect(state.items.isEmpty)
+    }
+}

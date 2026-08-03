@@ -19,7 +19,15 @@ public enum DataPaths {
     /// the game rather than assuming Afterbirth+.
     public static var detected: GameVersion { VersionDetector.detect().version }
 
-    public static var logFile: URL { VersionDetector.logFile(for: detected) }
+    /// ISAAC_LOG_PATH points the tailer somewhere else. Needed to exercise anything that
+    /// depends on the *shape* of a log -- run transitions, replay, truncation -- without
+    /// playing the game, and to reproduce a bug from someone else's log.
+    public static var logFile: URL {
+        if let override = ProcessInfo.processInfo.environment["ISAAC_LOG_PATH"] {
+            return URL(fileURLWithPath: override)
+        }
+        return VersionDetector.logFile(for: detected)
+    }
 
     /// Standard Steam location. The setup wizard lets the user pick if this misses.
     public static var defaultGameRoot: URL {

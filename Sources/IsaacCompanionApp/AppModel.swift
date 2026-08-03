@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Ingest
 import IsaacCore
@@ -157,6 +158,143 @@ public final class AppModel {
     public private(set) var launchError: String?
     private var processTimer: Timer?
     private var updateTimer: Timer?
+    private var checkpointTimer: Timer?
+
+    // MARK: - run history
+
+    public let archive = RunArchive(
+        directory: DataPaths.root.appending(path: "history", directoryHint: .isDirectory))
+    public private(set) var history: [RunSummary] = []
+    private var runStartedAt: Date?
+    /// The tailer replays the whole log on attach, in one batch. Those runs are already
+    /// over and we have no idea when they were played, so they are not archived.
+    private var didInitialReplay = false
+
+    /// Writes the run in memory to the archive, if there is one worth keeping.
+    ///
+    /// Called at every point the run is about to be replaced -- a new seed, a log reset,
+    /// the app quitting -- because those are the only moments the outgoing run still
+    /// exists. There is no "run over" line in the log to hang this on.
+    private func archiveCurrentRun(inProgress: Bool = false) {
+        guard didInitialReplay, let started = runStartedAt, run.seed != nil else { return }
+        // A seed with nothing in it is the menu, not a run.
+        guard !run.items.isEmpty || run.stage > 1 else { return }
+        let summary = summarise(started: started, inProgress: inProgress)
+        do {
+            try archive.save(summary)
+            history = archive.load()
+        } catch {
+            // Losing a history entry must never take the live readout down with it.
+            print("could not archive run: \(error.localizedDescription)")
+        }
+    }
+
+    private func summarise(started: Date, inProgress: Bool) -> RunSummary {
+        // Recomputed rather than read off `stats`: within one batch of log lines the
+        // cached value can still belong to the previous run.
+        let owned = run.items.compactMap { resolve($0) }.filter { $0.kind.isAutoTracked }
+        let who =
+            bundle?.characters.first { $0.id == run.playerType }
+            ?? Characters.resolve(run.playerType)
+        let computed = StatEngine.compute(character: who, items: owned)
+        let bosses = run.bossesDefeated.compactMap { bestiary.boss($0)?.name }
+        return RunSummary(
+            // Fractional seconds, because the id is the filename: two runs that begin
+            // in the same second would otherwise be the same file, and the second would
+            // silently replace the first. Unreachable while actually playing, and
+            // trivially reachable from a replayed log.
+            id: RunSummary.id(for: started),
+            startedAt: started,
+            endedAt: inProgress ? nil : Date(),
+            seed: run.seed,
+            characterID: run.playerType,
+            characterName: who.name,
+            finalStage: run.stage,
+            finalStageType: run.stageType,
+            curses: run.curses,
+            items: run.items.map {
+                RunSummary.Item(id: $0.itemID, name: $0.name, manual: $0.manual)
+            },
+            bosses: bosses,
+            death: run.death.map { bestiary.describeDeath($0) },
+            outcome: inProgress
+                ? .inProgress
+                : RunSummary.outcome(bosses: bosses, died: run.death != nil),
+            finalStats: [
+                ("damage", computed.damage), ("tears", computed.tears),
+                ("tearDelay", computed.tearDelay), ("range", computed.range),
+                ("shotSpeed", computed.shotSpeed), ("speed", computed.speed),
+                ("luck", computed.luck),
+            ].map {
+                RunSummary.Stat(
+                    key: $0.0, value: $0.1.value, base: $0.1.base, approx: $0.1.approx)
+            })
+    }
+
+    /// Saves the live run every minute so a crash or a power cut costs a minute rather
+    /// than the whole run.
+    private func startRunCheckpoints() {
+        checkpointTimer?.invalidate()
+        checkpointTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            Task { @MainActor [weak self] in self?.archiveCurrentRun(inProgress: true) }
+        }
+        history = archive.load()
+    }
+
+    /// Called when the app is quitting: the run in memory is otherwise simply lost.
+    public func finishForQuit() {
+        archiveCurrentRun()
+    }
+
+    public func deleteRun(id: String) {
+        try? archive.delete(id: id)
+        history = archive.load()
+    }
+
+    public func deleteAllRuns() {
+        try? archive.deleteAll()
+        history = archive.load()
+    }
+
+    public func historyJSON() -> String {
+        let totals = RunArchive.totals(of: history)
+        let iso = ISO8601DateFormatter()
+        let runs: [[String: Any]] = history.map { r in
+            var out: [String: Any] = [
+                "id": r.id,
+                "startedAt": iso.string(from: r.startedAt),
+                "character": r.characterName,
+                "stage": r.finalStage,
+                "outcome": r.outcome.rawValue,
+                "items": r.items.map { ["id": $0.id, "name": $0.name, "manual": $0.manual] },
+                "curses": r.curses,
+                "bosses": r.bosses,
+                "stats": r.finalStats.map {
+                    ["key": $0.key, "value": $0.value, "base": $0.base, "approx": $0.approx]
+                },
+            ]
+            if let seed = r.seed { out["seed"] = seed }
+            if let death = r.death { out["death"] = death }
+            if let d = r.duration { out["duration"] = Int(d) }
+            return out
+        }
+        let payload: [String: Any] = [
+            "runs": runs,
+            "totals": [
+                "runs": totals.runs, "wins": totals.wins, "deaths": totals.deaths,
+                "abandoned": totals.abandoned, "deepestStage": totals.deepestStage,
+                "totalTime": Int(totals.totalTime),
+                "favouriteItems": totals.favouriteItems.prefix(12).map {
+                    ["name": $0.name, "count": $0.count]
+                },
+                "byCharacter": totals.byCharacter.map {
+                    ["name": $0.name, "runs": $0.runs, "wins": $0.wins]
+                },
+            ],
+        ]
+        return (try? JSONSerialization.data(withJSONObject: payload))
+            .map { String(decoding: $0, as: UTF8.self) } ?? #"{"runs":[],"totals":{}}"#
+    }
 
     /// Before anything reads UserDefaults: the bundle id changed, and the old settings
     /// live under the old one.
@@ -218,6 +356,13 @@ public final class AppModel {
             phase = .needsSetup(nil)
         }
         startUpdateChecks()
+        // Quitting is the commonest way a run ends, and without this the run in memory
+        // is simply lost -- which is the whole problem the archive exists to fix.
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.finishForQuit() }
+        }
     }
 
     /// One check shortly after launch, then daily. Deliberately not on a tight timer:
@@ -365,16 +510,37 @@ public final class AppModel {
     private func ingest(_ lines: [String]) {
         for line in lines {
             if line == LogTailer.resetMarker {
+                // The game relaunched, so whatever was live is over.
+                archiveCurrentRun()
                 run = RunState()
                 reducer = RunReducer()
+                runStartedAt = Date()
                 continue
             }
             guard let event = parser.parse(line: line) else { continue }
             if case .gameVersion(let v) = event { noteGameVersion(v) }
+            // A new seed replaces the run in memory, so this is the last moment the
+            // outgoing one exists at all. Archive before the reducer drops it.
+            // Only a DIFFERENT seed: the reducer treats a repeat as the same run, and
+            // archiving on it would file the run twice and restart its clock.
+            if case .runStarted(let seed) = event, seed != run.seed {
+                archiveCurrentRun()
+                runStartedAt = Date()
+            }
             reducer.apply(event, to: &run)
         }
         recompute()
         refreshProgress()
+        // The first batch is the whole existing log, replayed. Runs in it finished
+        // before the app was watching and their timings are unknown, so they are not
+        // archived -- see archiveCurrentRun.
+        if !didInitialReplay {
+            didInitialReplay = true
+            // A run already in progress at attach: its start is unknown, so the best
+            // honest answer is "when we started watching".
+            if run.seed != nil { runStartedAt = Date() }
+            startRunCheckpoints()
+        }
     }
 
     public func manualAdd(itemID: Int, kind: ItemKind? = nil) {

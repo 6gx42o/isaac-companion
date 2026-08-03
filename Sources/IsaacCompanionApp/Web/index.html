@@ -52,6 +52,7 @@
         </div>
       </span>
     <button class="tab" data-tab="bestiary">Enemies</button>
+    <button class="tab" data-tab="history">History</button>
     <button class="tab" data-tab="overlay">Overlay</button>
     <button class="tab" data-tab="settings">Settings</button>
     <button class="tab" data-tab="unlocks">Unlocks</button>
@@ -155,6 +156,30 @@
     <div id="pinned"></div>
     <p id="acount" class="muted"></p>
     <ul id="alist" class="results"></ul>
+  </section>
+
+  <section id="history" class="page">
+    <div class="hist-top">
+      <div>
+        <h1>Past runs</h1>
+        <p class="lead" id="hist-lead">Every run is kept once it ends &#8212; seed, build in
+          pickup order, final stats and what killed you.</p>
+      </div>
+      <div class="hist-actions">
+        <select id="hist-filter">
+          <option value="all">All runs</option>
+          <option value="won">Wins</option>
+          <option value="died">Deaths</option>
+          <option value="abandoned">Abandoned</option>
+        </select>
+        <button class="chip" id="hist-export">Export</button>
+        <button class="chip" id="hist-clear">Clear all</button>
+      </div>
+    </div>
+    <div id="hist-totals" class="hist-totals"></div>
+    <ul id="hist-list" class="hist-list"></ul>
+    <p id="hist-empty" class="empty" hidden>No runs yet. Play one with the app open and it
+      will appear here when it ends.</p>
   </section>
 
   <section id="bestiary" class="page">

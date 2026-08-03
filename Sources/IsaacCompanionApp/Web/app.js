@@ -649,6 +649,7 @@ document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () 
   // Not a fresh check -- just the current state, so the row is never stale-looking
   // when you open the tab. Checking is on its own schedule.
   if (t.dataset.tab === "settings") send({ type: "updateState" });
+  if (t.dataset.tab === "history") send({ type: "history" });
 }));
 
 // ---- unlocks ---------------------------------------------------------------
@@ -2803,3 +2804,142 @@ window.onStorageMode = (mode) => {
 };
 
 settingsBoot();
+
+/* ---- history ---------------------------------------------------------------
+   Past runs. Everything here comes from the archive on disk, not from the live
+   run, so it survives quitting the app -- which is the whole point. */
+let historyData = { runs: [], totals: {} };
+let histFilter = "all";
+
+const OUTCOME = {
+  won: ["Won", "good"],
+  died: ["Died", "bad"],
+  abandoned: ["Abandoned", "dim"],
+  inProgress: ["In progress", "warn"],
+};
+
+function histDuration(seconds) {
+  if (seconds == null) return "";
+  const m = Math.round(seconds / 60);
+  if (m < 60) return m + " min";
+  return Math.floor(m / 60) + " h " + (m % 60) + " min";
+}
+
+function histWhen(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    + " " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+function histRow(r) {
+  const li = el("li", "hist-row");
+  const [label, tone] = OUTCOME[r.outcome] || ["?", "dim"];
+
+  const head = el("div", "hist-head");
+  head.append(el("span", "hist-char", r.character));
+  head.append(el("span", "pill " + tone, label));
+  head.append(el("span", "hist-meta",
+    "Floor " + r.stage + (r.duration ? "  ·  " + histDuration(r.duration) : "")
+    + (r.seed ? "  ·  " + r.seed : "")));
+  head.append(el("span", "hist-when", histWhen(r.startedAt)));
+  li.appendChild(head);
+
+  if (r.death) li.appendChild(el("div", "hist-death", r.death));
+
+  // The build, in pickup order -- the order the stat model composes in.
+  if (r.items.length) {
+    const items = el("div", "hist-items");
+    for (const it of r.items) {
+      const chip = el("span", "hist-item" + (it.manual ? " manual" : ""), it.name);
+      chip.title = it.manual ? "added by hand" : "#" + it.id;
+      items.appendChild(chip);
+    }
+    li.appendChild(items);
+  }
+
+  const stats = el("div", "hist-stats");
+  for (const s of r.stats) {
+    const cell = el("span", "hist-stat");
+    cell.append(el("span", "k", s.key));
+    cell.append(el("span", "v", (s.approx ? "~" : "") + fmt(s.value)));
+    stats.appendChild(cell);
+  }
+  li.appendChild(stats);
+
+  const del = el("button", "hist-del", "Delete");
+  del.title = "Remove this run from the history";
+  del.onclick = () => { if (confirm("Delete this run from your history?"))
+    send({ type: "deleteRun", id: r.id }); };
+  li.appendChild(del);
+  return li;
+}
+
+function renderHistory() {
+  const list = $("hist-list"), empty = $("hist-empty"), totals = $("hist-totals");
+  if (!list) return;
+  const runs = historyData.runs.filter(
+    (r) => histFilter === "all" || r.outcome === histFilter);
+  list.replaceChildren(...runs.map(histRow));
+  if (empty) empty.hidden = historyData.runs.length > 0;
+
+  const t = historyData.totals || {};
+  if (!totals) return;
+  if (!t.runs) { totals.replaceChildren(); return; }
+  const rate = t.runs ? Math.round((t.wins / t.runs) * 100) : 0;
+  const cells = [
+    ["Runs", t.runs],
+    ["Wins", t.wins + "  (" + rate + "%)"],
+    ["Deaths", t.deaths],
+    ["Deepest", "Floor " + t.deepestStage],
+    ["Played", histDuration(t.totalTime)],
+  ];
+  const box = el("div", "hist-totalrow");
+  for (const [k, v] of cells) {
+    const c = el("div", "hist-total");
+    c.append(el("span", "k", k), el("span", "v", String(v)));
+    box.appendChild(c);
+  }
+  const extra = el("div", "hist-lists");
+  if ((t.favouriteItems || []).length) {
+    const d = el("div", "hist-fav");
+    d.appendChild(el("h3", null, "Most-taken items"));
+    const ul = el("ul");
+    for (const f of t.favouriteItems.slice(0, 8)) {
+      const li = el("li");
+      li.append(el("span", "n", f.name), el("span", "c", f.count + " runs"));
+      ul.appendChild(li);
+    }
+    d.appendChild(ul); extra.appendChild(d);
+  }
+  if ((t.byCharacter || []).length) {
+    const d = el("div", "hist-fav");
+    d.appendChild(el("h3", null, "By character"));
+    const ul = el("ul");
+    for (const c of t.byCharacter.slice(0, 8)) {
+      const li = el("li");
+      li.append(el("span", "n", c.name),
+        el("span", "c", c.runs + " runs, " + c.wins + " won"));
+      ul.appendChild(li);
+    }
+    d.appendChild(ul); extra.appendChild(d);
+  }
+  totals.replaceChildren(box, extra);
+}
+
+window.onHistory = (data) => {
+  historyData = data || { runs: [], totals: {} };
+  renderHistory();
+};
+
+{
+  const f = $("hist-filter");
+  if (f) f.addEventListener("change", () => { histFilter = f.value; renderHistory(); });
+  const ex = $("hist-export");
+  if (ex) ex.onclick = () => send({ type: "exportHistory" });
+  const clear = $("hist-clear");
+  if (clear) clear.onclick = () => {
+    if (confirm("Delete every run from your history? This cannot be undone."))
+      send({ type: "deleteAllRuns" });
+  };
+}

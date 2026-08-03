@@ -64,6 +64,10 @@ struct WebView: NSViewRepresentable {
                 "window.onPanelGeometry(\(PanelController.shared.geometryJSON()))")
         }
 
+        func pushHistory() {
+            webView?.evaluateJavaScript("window.onHistory(\(model.historyJSON()))")
+        }
+
         private var lastUpdateJSON = ""
 
         func pushUpdate() {
@@ -188,6 +192,24 @@ struct WebView: NSViewRepresentable {
                     await model.rebuild()
                     webView?.evaluateJavaScript(
                         "window.onRebuilt(\(model.buildWarnings.isEmpty))", completionHandler: nil)
+                }
+            case "history":
+                pushHistory()
+            case "deleteRun":
+                if let id = body["id"] as? String {
+                    model.deleteRun(id: id)
+                    pushHistory()
+                }
+            case "deleteAllRuns":
+                model.deleteAllRuns()
+                pushHistory()
+            case "exportHistory":
+                // A file the user can keep, rather than a copy-to-clipboard of JSON.
+                let panel = NSSavePanel()
+                panel.nameFieldStringValue = "isaac-run-history.json"
+                panel.allowedContentTypes = [.json]
+                if panel.runModal() == .OK, let url = panel.url {
+                    try? Data(model.historyJSON().utf8).write(to: url)
                 }
             case "updateState":
                 pushUpdate()

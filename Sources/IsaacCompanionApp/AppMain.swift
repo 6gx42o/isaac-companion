@@ -58,6 +58,43 @@ struct IsaacCompanionApp: App {
                         }
                         exit(0)
                     }
+                    // Dev hook: drive a run transition through the real tailer, reducer
+                    // and archive, and print what ended up on disk. Pair it with
+                    // ISAAC_LOG_PATH. The archiving happens at points the log only
+                    // reaches while you play -- a new seed, a relaunch, quitting -- so
+                    // without this the only way to test it is to play two runs.
+                    if let appendPath = ProcessInfo.processInfo.environment["ISAAC_HISTORY_TEST"] {
+                        func line(_ s: String) {
+                            FileHandle.standardError.write(Data((s + "\n").utf8))
+                        }
+                        try? await Task.sleep(for: .milliseconds(800))
+                        line("after replay: \(model.history.count) archived, "
+                            + "live seed \(model.run.seed ?? "-") "
+                            + "items \(model.run.items.count)")
+                        // A second run arriving while we watch: the first must be filed.
+                        if let extra = try? String(contentsOfFile: appendPath, encoding: .utf8),
+                            let handle = try? FileHandle(forWritingTo: Ingest.DataPaths.logFile) {
+                            handle.seekToEndOfFile()
+                            handle.write(Data(extra.utf8))
+                            try? handle.close()
+                        }
+                        try? await Task.sleep(for: .milliseconds(1200))
+                        line("after a second run started: \(model.history.count) archived")
+                        for r in model.history {
+                            line("  RESULT \(r.characterName) seed=\(r.seed ?? "-") "
+                                + "floor=\(r.finalStage) outcome=\(r.outcome.rawValue) "
+                                + "items=\(r.items.map(\.name).joined(separator: "/"))")
+                        }
+                        // And quitting files whatever is still live.
+                        model.finishForQuit()
+                        let final = model.archive.load()
+                        line("after quit: \(final.count) archived")
+                        for r in final {
+                            line("  FINAL \(r.characterName) seed=\(r.seed ?? "-") "
+                                + "outcome=\(r.outcome.rawValue) id=\(r.id)")
+                        }
+                        exit(0)
+                    }
                     // Dev hook: run the updater against the real Releases feed and print
                     // what happened, without installing anything. Both paths, because a
                     // refusal that has never been observed is not a guarantee.

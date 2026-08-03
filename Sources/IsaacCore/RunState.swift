@@ -79,7 +79,19 @@ public struct RunReducer: Sendable {
             state.gameRunning = true
 
         case .runStarted(let seed):
-            // A new seed means a new run: drop everything, including manual edits.
+            // A DIFFERENT seed means a new run: drop everything, including manual edits.
+            //
+            // The same seed repeated does not. This used to reset unconditionally, which
+            // the Rust port has always guarded against -- the two implementations of the
+            // same reducer disagreed, and this one was the riskier of the two: a repeated
+            // seed line would silently wipe the build and every number after it would be
+            // wrong. It also now decides when a run is archived, so an unconditional
+            // reset would file the same run twice and lose the second half.
+            let isSameRun = state.seed == seed
+            guard !isSameRun else {
+                state.gameRunning = true
+                return
+            }
             state = RunState()
             state.seed = seed
             state.gameRunning = true
