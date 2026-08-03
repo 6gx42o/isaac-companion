@@ -2978,14 +2978,22 @@ window.onHistory = (data) => {
 // `onHUD` marks the six the game itself displays. Isaac's HUD has no tear-delay
 // readout: delay is what the model computes internally and tears/second is what you
 // see, so delay is shown for context and not compared against anything.
+/* Afterbirth+ predates Repentance's HUD rewrite, and the difference matters here:
+   the stats HUD shows TEAR DELAY, not tears per second -- tears/s is Repentance's
+   presentation. This table had it exactly backwards, comparing tears/s against the
+   HUD and captioning tear delay "not on the HUD", when the delay is the only tear
+   number the HUD actually shows.
+   Conversion, for reference: tears/s = 30 / (delay + 1). */
 const VERIFY_ROWS = [
   { key: "damage", label: "Damage", tol: 0.05, onHUD: true },
-  { key: "tears", label: "Tears/s", tol: 0.05, onHUD: true },
+  { key: "delay", label: "Tears", tol: 0.5, onHUD: true,
+    note: "the HUD shows tear delay, not tears per second" },
   { key: "range", label: "Range", tol: 0.5, onHUD: true },
   { key: "shotSpeed", label: "Shot speed", tol: 0.05, onHUD: true },
   { key: "speed", label: "Speed", tol: 0.005, onHUD: true },
   { key: "luck", label: "Luck", tol: 0.05, onHUD: true },
-  { key: "delay", label: "Tear delay", tol: 0.5, onHUD: false },
+  { key: "tears", label: "Tears/s", tol: 0.05, onHUD: false,
+    note: "derived from the delay; Repentance shows this instead" },
 ];
 
 let verifyOn = false;
@@ -3007,6 +3015,7 @@ function renderVerify() {
   box.hidden = !verifyOn;
   if (!verifyOn) return;
 
+  setTimeout(updateMeasureButton, 0);
   host.replaceChildren(...VERIFY_ROWS.map(({ key, label, tol, onHUD }) => {
     const tr = el("tr");
     const name = el("td");
@@ -3031,6 +3040,7 @@ function renderVerify() {
         hudValues[key] = input.value;
         saveHudValues();
         paintVerdict(tr, key, tol, computed, input.value);
+        updateMeasureButton();
       });
       td.appendChild(input);
     } else {
@@ -3113,10 +3123,16 @@ function verifyReport() {
    Frames 6-8 are the angel and devil marks and one the app has no use for. */
 let hudStats = null;
 
+/* Corrected against a real HUD, and the correction is instructive: the eye is RANGE
+   (how far you see), and the dashes are the FIRE RATE (repeated shots), which is the
+   opposite of the guess. It showed up as Cain reading 17.75 on the row labelled Tears
+   -- 17.75 being his range exactly -- and 10 on the row labelled Range, 10 being his
+   tear delay exactly. */
 const HUD_ICON = {
   speed: 0,       // a boot with speed lines
-  tears: 1,       // an eye, firing
-  range: 2,       // dashes at three distances
+  range: 1,       // an eye -- how far Isaac can see
+  delay: 2,       // dashes -- repeated shots, i.e. the fire rate
+  tears: 2,       // same row; tears/s is the delay in other units
   shotSpeed: 3,   // a tear with a motion trail
   damage: 4,      // a sword
   luck: 5,        // a four-leaf clover
@@ -3271,3 +3287,42 @@ document.getElementById("pill-scan")?.addEventListener("click", () => {
   if (status) status.textContent = "Looking…";
   send({ type: "scanPocket" });
 });
+
+/* ---- measuring a character's base stats -------------------------------------
+   The researched table had three of Cain's six values wrong, so the app records
+   what the game itself shows rather than trusting a source. At the very start of
+   a run -- before any item is picked up -- the HUD IS the character's baseline,
+   so the numbers already typed into the comparison table above are a measurement.
+
+   Only offered at that moment. Subtracting known item deltas would let you
+   measure at any point, but it would fold the item data's own errors into the one
+   table that is meant to be ground truth. */
+function updateMeasureButton() {
+  const btn = document.getElementById("v-save");
+  if (!btn) return;
+  const can = !!(lastState && lastState.canMeasureBase);
+  const filled = VERIFY_ROWS.some(r => r.onHUD && (hudValues[r.key] || "").trim() !== "");
+  btn.hidden = !(can && filled);
+  btn.textContent = lastState && lastState.baseMeasured
+    ? "Update " + (lastState.character || "this character") + "'s measured base stats"
+    : "Save as " + ((lastState && lastState.character) || "this character") + "'s base stats";
+}
+
+document.getElementById("v-save")?.addEventListener("click", () => {
+  const msg = { type: "measureBase" };
+  for (const { key, onHUD } of VERIFY_ROWS) {
+    if (!onHUD) continue;
+    const raw = (hudValues[key] || "").trim();
+    if (raw !== "" && !Number.isNaN(Number(raw))) msg[key] = Number(raw);
+  }
+  send(msg);
+});
+
+window.onMeasured = (error) => {
+  const hint = document.getElementById("v-hint");
+  if (!hint) return;
+  hint.textContent = error
+    ? error
+    : "Saved. These are now this character's base stats, and the comparison should read "
+      + "all matches.";
+};

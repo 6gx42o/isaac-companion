@@ -688,8 +688,10 @@ public final class AppModel {
     }
 
     private func recompute() {
-        character =
+        let table =
             bundle?.characters.first { $0.id == run.playerType } ?? Characters.resolve(run.playerType)
+        // A reading taken off the game's own HUD beats anything in the table.
+        character = table.measured(with: measuredBases.measurement(for: run.playerType))
         let owned = run.items.compactMap { resolve($0) }.filter { $0.kind.isAutoTracked }
         stats = StatEngine.compute(character: character, items: owned)
     }
@@ -732,6 +734,10 @@ public final class AppModel {
             var character: String
             var characterUnverified: [String]
             var characterNotes: String
+            /// True when the HUD is showing base stats, so they can be recorded.
+            var canMeasureBase: Bool
+            /// True when this character's stats came from a reading, not the table.
+            var baseMeasured: Bool
             var stage: Int
             var room: String
             var roomOffersChoice: Bool
@@ -866,6 +872,8 @@ public final class AppModel {
             character: character.name,
             characterUnverified: character.unverified,
             characterNotes: character.notes,
+            canMeasureBase: canMeasureBase,
+            baseMeasured: measuredBases.measurement(for: run.playerType) != nil,
             stage: run.stage,
             room: String(describing: run.room),
             roomOffersChoice: run.room.offersChoice,
@@ -984,6 +992,52 @@ public final class AppModel {
         } catch {
             return ([], error.localizedDescription)
         }
+    }
+
+    // MARK: - measured character bases
+
+    /// Base stats read off the game's HUD, one character at a time. See MeasuredBases --
+    /// this exists because the researched table had three of Cain's six values wrong.
+    public private(set) var measuredBases = MeasuredBases.load(
+        from: DataPaths.root.appending(path: "measured-bases.json"))
+
+    /// True when the HUD is currently showing this character's BASE stats: a run with no
+    /// auto-tracked item picked up yet. Anything else and the numbers on screen include
+    /// item effects, so they cannot be recorded as a baseline.
+    ///
+    /// Deliberately strict. Subtracting known item deltas would allow measuring at any
+    /// point, but it would fold the item data's own errors into the one table that is
+    /// supposed to be ground truth.
+    public var canMeasureBase: Bool {
+        run.playerType != nil
+            && !run.items.contains { resolve($0)?.kind.isAutoTracked ?? false }
+    }
+
+    /// Records what the HUD showed as this character's baseline.
+    public func recordMeasuredBase(
+        damage: Double?, tearDelay: Double?, range: Double?,
+        shotSpeed: Double?, speed: Double?, luck: Double?
+    ) -> String? {
+        guard let playerType = run.playerType else { return "No run in progress." }
+        guard canMeasureBase else {
+            return "Items have already been picked up, so the HUD is not showing base "
+                + "stats any more. Measure at the start of a run."
+        }
+        let m = MeasuredBases.Measurement(
+            damage: damage, tearDelay: tearDelay, range: range, shotSpeed: shotSpeed,
+            speed: speed, luck: luck, takenAt: Date(), gameVersion: run.gameVersion)
+        guard !m.isEmpty else { return "Nothing was filled in." }
+        measuredBases.record(playerType: playerType, m)
+        measuredBases.save(to: DataPaths.root.appending(path: "measured-bases.json"))
+        recompute()
+        return nil
+    }
+
+    public func forgetMeasuredBase() {
+        guard let playerType = run.playerType else { return }
+        measuredBases.forget(playerType: playerType)
+        measuredBases.save(to: DataPaths.root.appending(path: "measured-bases.json"))
+        recompute()
     }
 
     // MARK: - pills

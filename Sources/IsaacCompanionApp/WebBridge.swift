@@ -285,6 +285,22 @@ struct WebView: NSViewRepresentable {
                     model.forgetPill(colour: colour)
                     pushPills()
                 }
+            case "measureBase":
+                let n = { (k: String) -> Double? in
+                    (body[k] as? NSNumber)?.doubleValue
+                        ?? (body[k] as? String).flatMap(Double.init)
+                }
+                let err = model.recordMeasuredBase(
+                    damage: n("damage"), tearDelay: n("delay"), range: n("range"),
+                    shotSpeed: n("shotSpeed"), speed: n("speed"), luck: n("luck"))
+                let msg = err.map { "\"\($0.replacingOccurrences(of: "\"", with: "'"))\"" }
+                    ?? "null"
+                webView?.evaluateJavaScript(
+                    "window.onMeasured(\(msg))", completionHandler: nil)
+                push(model.stateJSON(), force: true)
+            case "forgetBase":
+                model.forgetMeasuredBase()
+                push(model.stateJSON(), force: true)
             case "pills":
                 pushPills()
             case "scanRoom":

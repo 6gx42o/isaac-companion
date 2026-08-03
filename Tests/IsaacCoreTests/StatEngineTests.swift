@@ -211,3 +211,89 @@ struct HUDMeasuredTests {
         #expect(abs(bare.luck.value - 0) < 0.005)
     }
 }
+
+@Suite("Measured base stats")
+struct MeasuredBasesTests {
+    /// A measurement is only useful if feeding it back reproduces the number that was
+    /// measured. Tear delay is the one that can silently drift, because the HUD shows the
+    /// delay while the engine works in tear-ups and the curve between them is a sqrt.
+    /// Integers only, and that is not a shortcut: Afterbirth+ floors tear delay to a
+    /// whole number, so a delay of 5.5 is displayed and played as 5. The HUD can only
+    /// ever show an integer, so a measurement can only ever be one.
+    @Test("a measured tear delay round-trips through the curve")
+    func delayRoundTrips() {
+        for delay in [10.0, 9.0, 7.0, 12.0, 6.0] {
+            var c = Character(id: 99, name: "Test")
+            c = c.measured(
+                with: .init(tearDelay: delay, takenAt: Date(timeIntervalSince1970: 0)))
+            let out = StatEngine.compute(character: c, items: [])
+            #expect(
+                abs(out.tearDelay.value - delay) < 0.01,
+                "measured \(delay), engine recomputed \(out.tearDelay.value)")
+        }
+    }
+
+    @Test("a non-integer delay floors, as the game does")
+    func delayFloors() {
+        var c = Character(id: 99, name: "Test")
+        c = c.measured(with: .init(tearDelay: 5.5, takenAt: Date(timeIntervalSince1970: 0)))
+        let out = StatEngine.compute(character: c, items: [])
+        #expect(out.tearDelay.value == 5.0, "Afterbirth+ floors delay to a whole frame")
+    }
+
+    @Test("a measurement overrides the researched defaults and clears their flags")
+    func overridesAndClears() {
+        var c = Character(id: 7, name: "Azazel", range: 17.75)
+        c.unverified = ["range", "speed", "fireDelayMultiplier"]
+        let m = MeasuredBases.Measurement(
+            range: 16.25, speed: 1.15, takenAt: Date(timeIntervalSince1970: 0))
+        let out = c.measured(with: m)
+        #expect(out.range == 16.25, "the measurement wins over the researched value")
+        #expect(out.speed == 1.15)
+        #expect(!out.unverified.contains("range"), "somebody has now checked it")
+        #expect(!out.unverified.contains("speed"))
+        #expect(
+            out.unverified.contains("fireDelayMultiplier"),
+            "a stat the measurement did not cover stays flagged")
+    }
+
+    @Test("a later partial reading tops up an earlier one instead of blanking it")
+    func merges() {
+        var store = MeasuredBases()
+        let t = Date(timeIntervalSince1970: 0)
+        store.record(playerType: 2, .init(range: 17.75, takenAt: t))
+        store.record(playerType: 2, .init(speed: 1.3, takenAt: t))
+        let m = store.measurement(for: 2)
+        #expect(m?.range == 17.75, "the first reading survives the second")
+        #expect(m?.speed == 1.3)
+        #expect(Set(m?.fields ?? []) == ["range", "speed"])
+    }
+
+    @Test("an empty reading is not stored")
+    func ignoresEmpty() {
+        var store = MeasuredBases()
+        store.record(playerType: 3, .init(takenAt: Date(timeIntervalSince1970: 0)))
+        #expect(store.measurement(for: 3) == nil)
+    }
+
+    @Test("survives a round trip to disk")
+    func persists() throws {
+        var store = MeasuredBases()
+        store.record(
+            playerType: 2,
+            .init(range: 17.75, speed: 1.3, takenAt: Date(timeIntervalSince1970: 0),
+                  gameVersion: "v1.06.T1"))
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "measured-\(UUID().uuidString).json")
+        store.save(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(MeasuredBases.load(from: url) == store)
+    }
+
+    @Test("a missing file is an empty store, not a crash")
+    func missingFile() {
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "nope-\(UUID().uuidString).json")
+        #expect(MeasuredBases.load(from: url).byPlayerType.isEmpty)
+    }
+}

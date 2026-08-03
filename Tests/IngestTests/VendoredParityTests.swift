@@ -120,8 +120,53 @@ struct MeasuredCharacterTests {
         // Base luck must stay 0: Lucky Foot is his starting item and the log reports it
         // as an ordinary pickup, so a base of 1 would read 2 in game.
         #expect(cain.luck == 0)
-        // Range is still unmeasured, and saying so is the point of the flag.
-        #expect(cain.unverified.contains("range"))
-        #expect(!cain.unverified.contains("speed"), "speed has now been measured")
+        // Range: 17.75, not Isaac's 23.75. Read off the HUD and confirmed against the
+        // wiki's own Cain page, which gives 17.75 before Repentance and 4.5 after.
+        #expect(cain.range == 17.75, "the HUD showed 17.75")
+        // Nothing left unmeasured for Cain, which is what makes him the reference row.
+        #expect(cain.unverified.isEmpty, "every one of Cain's stats has now been measured")
+    }
+}
+
+@Suite("Range is on the Afterbirth+ scale, not Repentance's")
+struct RangeScaleTests {
+    /// The single easiest way to corrupt this table. Afterbirth+ and Repentance display
+    /// the same stat on different scales -- Isaac reads 23.75 here and 6.5 there -- and
+    /// every summary table found online quotes the Repentance number while presenting it
+    /// as general. A single-digit range in this file means a version mix-up got in.
+    @Test("no character carries a Repentance-scale range")
+    func noRepentanceScale() {
+        for c in Characters.all {
+            // Comment is a string literal type, so this cannot be built with `+`.
+            #expect(
+                c.range >= 10,
+                "\(c.name) has range \(c.range), which is the Repentance scale (Isaac 6.5)")
+            #expect(c.range <= 40, "\(c.name) has an implausible range \(c.range)")
+        }
+    }
+
+    /// Isaac is the row the whole stat model was validated against; if it moves, every
+    /// number the app shows moves with it.
+    @Test("Isaac is still the 23.75 baseline")
+    func isaacBaseline() {
+        let isaac = Characters.resolve(0)
+        #expect(isaac.range == 23.75)
+        #expect(isaac.damage == 3.5)
+        #expect(isaac.speed == 1.0)
+        #expect(isaac.damageMultiplier == 1.0)
+    }
+
+    /// Researched, not measured, and the flag has to keep saying so.
+    @Test("characters with a researched range still declare it unverified")
+    func researchedStaysFlagged() {
+        for name in ["Azazel", "Lazarus", "Samson"] {
+            guard let c = Characters.all.first(where: { $0.name == name }) else {
+                Issue.record("no character named \(name)")
+                continue
+            }
+            #expect(
+                c.unverified.contains("range"),
+                "\(name)'s range came from a wiki page, not from the game")
+        }
     }
 }
