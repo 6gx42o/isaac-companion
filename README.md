@@ -429,8 +429,13 @@ confirmed) found 17 real defects. The ones worth remembering:
 
 `win/` is a separate, **dependency-free** Rust binary that runs the same log parser and
 the same Afterbirth+ stat engine. It tails `log.txt`, computes the stats and serves a
-readout on localhost, which it opens in your browser. Single 440 KB `.exe`, no
+readout on localhost, which it opens in your browser. Single 570 KB `.exe`, no
 installer, no runtime — it imports only DLLs that ship with Windows.
+
+It has the browser too: 775 items, 763 enemies and 403 achievements, searchable, with
+item art read from **your own** copy of the game. And an always-on-top overlay, drawn
+with GDI through hand-written Win32 declarations rather than a crate, so the binary stays
+dependency-free.
 
 Cross-compiles from macOS:
 
@@ -439,7 +444,7 @@ brew install mingw-w64
 rustup target add x86_64-pc-windows-gnu
 python3 win/bake-data.py     # bakes the item + character tables into the binary
 cargo build --release --target x86_64-pc-windows-gnu --manifest-path win/Cargo.toml
-cargo test --manifest-path win/Cargo.toml    # 13 tests
+cargo test --manifest-path win/Cargo.toml    # 30 tests
 ```
 
 The stat engine is tested against **the same fixtures as the Swift one** — Isaac
@@ -447,9 +452,23 @@ The stat engine is tested against **the same fixtures as the Swift one** — Isa
 the two builds ever disagree about a number, that test fails rather than someone's
 screen being wrong.
 
-**Not in it:** the overlay and the pedestal scanner. Both are macOS window-server
-features (`NSPanel`, ScreenCaptureKit) with no portable equivalent — so they are absent
-rather than faked.
+**Two things about the overlay**, worth knowing before you rely on it. It cannot draw
+over *exclusive* fullscreen — that is a property of how the display is being driven, not
+something any program can work around from outside the game, so Isaac has to be windowed
+or borderless-windowed. And no automated check can tell you it *looks* right above a
+running game: CI creates the window and asks Windows whether it exists, which catches a
+bad style constant or a mis-shaped struct, and nothing more.
+
+**Not in it:** the pedestal scanner. That is ScreenCaptureKit, a macOS window-server
+feature with no portable equivalent — absent rather than faked. The Windows build reports
+the pedestal *count* from the log instead, since the log gives a position but never an
+item id.
+
+**Updating.** `isaac-companion.exe --update` checks GitHub Releases, and refuses to
+install anything whose SHA-256 is not the one published with the release. It uses the
+`curl.exe` and `certutil` that ship with Windows rather than taking on a TLS dependency,
+and it renames the running binary aside rather than trying to overwrite it, which
+Windows does not allow.
 
 ## Data this repository does not contain
 
@@ -462,9 +481,12 @@ redistribute. Build it from your own install:
 swift run ingestctl vendor Sources/IsaacCompanionApp/VendoredData/eid.abplus.json
 ```
 
-Everything else comes out of your own copy of the game at build time. The Windows
-tables (`win/src/*.tsv`) hold item names and numeric stat deltas only — facts about the
-game, no third-party prose.
+Everything else comes out of your own copy of the game at build time. The Windows tables
+(`win/src/*.tsv`) hold names, ids, kinds, pools and numeric stat deltas — facts out of the
+game's own XML, no third-party prose. **Sprites are not in them either:** the art is
+Nicalis's, so the Windows browser reads PNGs out of your own install and serves them
+straight to the page. No art ships in the download, which is also why that binary needs
+no image library.
 
 ## Credits
 

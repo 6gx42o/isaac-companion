@@ -23,6 +23,14 @@ DIST="dist"
 VERSION="$(tr -d '[:space:]' < VERSION)"
 ID="com.rushilluthra.isaaccompanion"
 
+# The Rust crate carries its own version, and the Windows updater compares against it.
+# Left to drift, the .exe would offer itself an update forever.
+WIN_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' win/Cargo.toml | head -1)"
+if [ "$WIN_VERSION" != "$VERSION" ]; then
+  echo "win/Cargo.toml says $WIN_VERSION but VERSION says $VERSION" >&2
+  exit 1
+fi
+
 ./make-app.sh release --universal
 
 # Signing the installers is separate from signing the app: an unsigned pkg is refused by

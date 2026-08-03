@@ -19,6 +19,7 @@ mod overlay;
 mod parser;
 mod run;
 mod server;
+mod update;
 mod stats;
 mod ui;
 
@@ -91,6 +92,24 @@ fn main() {
     if std::env::args().any(|a| a == "--overlay-selftest") {
         std::process::exit(if overlay::selftest() { 0 } else { 1 });
     }
+    // A past update leaves the previous build next to us; nothing can delete a running
+    // exe, so it is cleared on the next start instead.
+    update::clean_up_after_update();
+
+    if std::env::args().any(|a| a == "--update") {
+        match update::check(env!("CARGO_PKG_VERSION")) {
+            None => println!("You are on {}, the newest version.", env!("CARGO_PKG_VERSION")),
+            Some(u) => {
+                println!("{} is available. Downloading and verifying...", u.tag);
+                match update::install(&u) {
+                    Ok(()) => println!("Updated to {}. Start it again.", u.tag),
+                    Err(e) => println!("Not installed: {e}"),
+                }
+            }
+        }
+        return;
+    }
+
     let data = Arc::new(run::Data::load());
     let log_path = find_log();
     let state = Arc::new(Mutex::new(State {
