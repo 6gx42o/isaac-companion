@@ -10,8 +10,15 @@ ResourceExtractor_log.txt
 # Generated, and large: the site inlines every installer as base64, so the built
 # page is ~11 MB. Regenerate it with dev/build-site.py rather than committing it.
 dev/site.html
+dev/isaac-site.html
 dev/payloads.js
 dev/preview.html
+# Inputs to build-site.py, both regenerated rather than tracked:
+#   dev/site-data.json  <- swift run ingestctl sitedata dev/site-data.json  (5 MB, and it
+#                          contains sprite art extracted from the user's own game install)
+#   dev/icon256.png     <- sips -s format png -Z 256 Resources/icon-1024.png
+dev/site-data.json
+dev/icon256.png
 Resources/*.iconset/
 
 # NOT redistributed. This is a snapshot of the External Item Descriptions mod's own

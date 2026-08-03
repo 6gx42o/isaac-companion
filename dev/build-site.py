@@ -5,7 +5,7 @@ Data comes from `ingestctl sitedata`, which measures each sprite's dominant colo
 off the atlas — that is what makes "grey" or "gold" work as a search term when you
 cannot remember an item's name.
 """
-import base64, io, json, pathlib, sys
+import base64, io, json, pathlib, sys, urllib.request
 
 from PIL import Image
 
@@ -47,21 +47,69 @@ for it in data["items"]:
 
 blob = json.dumps(data, separators=(",", ":"))
 
-# The .app itself, so the download button downloads rather than explains. Inlined as
-# base64 because the page must stay self-contained (strict CSP, no external hosts).
-# Every download, inlined. The three Mac formats all carry the SAME universal binary
-# (arm64 + x86_64), so which one you take is a question of how you like to install,
-# never of which Mac you own. The .exe is a different program -- see win/ -- running
-# the same log parser and the same Afterbirth+ stat model.
-DOWNLOADS = {}
-for kind in ("zip", "dmg", "pkg", "exe"):
-    f = HERE / f"IsaacCompanion.{kind}"
-    DOWNLOADS[kind] = {
-        "b64": base64.b64encode(f.read_bytes()).decode() if f.exists() else "",
-        "mb": f"{f.stat().st_size / 1048576:.1f}" if f.exists() else "?",
+REPO_SLUG = "6gx42o/isaac-companion"
+
+# Downloads point at the GitHub Release rather than being inlined as base64.
+#
+# They used to be inlined, which made the page genuinely self-contained -- but four
+# installers is ~9.6 MB of base64 in a page whose actual content is under 2 MB, so five
+# sixths of every visit was spent downloading binaries the visitor had not asked for yet.
+# The URLs are resolved HERE, at build time, so the page still makes no network request
+# of its own: it just contains ordinary links, and the browser fetches only what is
+# clicked.
+#
+# The three Mac formats all carry the SAME universal binary (arm64 + x86_64), so which
+# one you take is a question of how you like to install, never of which Mac you own. The
+# .exe is a different program -- see win/ -- running the same log parser and the same
+# Afterbirth+ stat model.
+SUFFIX = {
+    "zip": ".zip",
+    "dmg": ".dmg",
+    "pkg": ".pkg",
+    "exe": "-windows-x64.exe",
+}
+
+
+def release_assets():
+    """{kind: {url, mb}} for the latest release, or {} if it cannot be reached.
+
+    Never raises: a site build should not fail because GitHub is unreachable or because
+    no release exists yet. The caller falls back to the Releases page, which is a link
+    that always works, rather than to a dead button.
+    """
+    api = f"https://api.github.com/repos/{REPO_SLUG}/releases/latest"
+    try:
+        req = urllib.request.Request(api, headers={"User-Agent": "isaac-site-build"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            rel = json.load(r)
+    except Exception as e:                       # noqa: BLE001 - any failure is the same
+        print(f"  ! could not reach the Releases API ({e}); linking the Releases page")
+        return {}, None
+    out = {}
+    for a in rel.get("assets", []):
+        for kind, suffix in SUFFIX.items():
+            if a["name"].endswith(suffix):
+                out[kind] = {
+                    "url": a["browser_download_url"],
+                    "mb": f"{a['size'] / 1048576:.1f}",
+                }
+    return out, rel.get("tag_name")
+
+
+ASSETS, TAG = release_assets()
+RELEASES_URL = f"https://github.com/{REPO_SLUG}/releases"
+DOWNLOADS = {
+    kind: {
+        "url": ASSETS.get(kind, {}).get("url", RELEASES_URL),
+        "mb": ASSETS.get(kind, {}).get("mb", "?"),
     }
-APP_B64 = DOWNLOADS["zip"]["b64"]
-APP_MB = DOWNLOADS["zip"]["mb"]
+    for kind in SUFFIX
+}
+missing = [k for k in SUFFIX if k not in ASSETS]
+if missing:
+    print(f"  ! release is missing: {', '.join(missing)} (those buttons link to Releases)")
+else:
+    print(f"  downloads -> {TAG} " + " ".join(f"{k}:{v['mb']}MB" for k, v in DOWNLOADS.items()))
 
 ICON_B64 = base64.b64encode((HERE / "icon256.png").read_bytes()).decode() \
     if (HERE / "icon256.png").exists() else ""
@@ -285,6 +333,7 @@ h2{font-family:var(--serif);font-size:clamp(24px,3.4vw,36px);margin:0 0 10px;let
    big it is, so nothing is hidden behind the size of it. */
 .dlhero{margin:4px 0 0}
 .dlmain{display:flex;align-items:center;gap:18px;width:100%;max-width:520px;
+  text-decoration:none;
   padding:20px 26px;cursor:pointer;text-align:left;
   background:var(--panel);color:var(--ash);
   border:1px solid var(--mark);border-radius:3px;position:relative;overflow:hidden;
@@ -2784,13 +2833,13 @@ footer a{color:var(--dim)}
            knows the answer, so it answers: this button IS the right build, named and
            sized, and the alternatives sit underneath for the people who want them. -->
       <div class="dlhero">
-        <button class="dlmain" id="dlmain" data-kind="dmg">
+        <a class="dlmain" id="dlmain" data-kind="dmg" href="#">
           <span class="dlmain-arrow" aria-hidden="true">&#8595;</span>
           <span class="dlmain-text">
             <span class="dlmain-title" id="dlmain-title">Download</span>
             <span class="dlmain-sub" id="dlmain-sub">working out which build you need&#8230;</span>
           </span>
-        </button>
+        </a>
         <p class="dlmain-note" id="dlmain-note"></p>
       </div>
 
@@ -4015,32 +4064,16 @@ $("q").addEventListener("input", render);
 render();
 
 /* ---- downloads ----
-   Every format is inlined as base64, so these are real downloads from a page that
-   makes no network requests at all. */
+   Resolved at build time to GitHub Release URLs, so the page itself still makes no
+   network request -- it just holds ordinary links, and the browser fetches only what
+   someone actually clicks. When a release asset is missing, the URL falls back to the
+   Releases page: a link that always works beats a button that does nothing. */
 const DOWNLOADS = __DOWNLOADS__;
-const DL_TYPE = {
-  zip: "application/zip",
-  dmg: "application/x-apple-diskimage",
-  pkg: "application/vnd.apple.installer+xml",
-  exe: "application/vnd.microsoft.portable-executable",
-};
-function download(kind){
-  const b64 = (DOWNLOADS[kind] || {}).b64;
-  if(!b64){ alert("This build has no ." + kind + " attached."); return; }
-  const bin = atob(b64);
-  const buf = new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) buf[i] = bin.charCodeAt(i);
-  const url = URL.createObjectURL(new Blob([buf], {type: DL_TYPE[kind] || "application/octet-stream"}));
-  const a = document.createElement("a");
-  a.href = url; a.download = "IsaacCompanion." + kind;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 4000);
-}
+function dlURL(kind){ return (DOWNLOADS[kind] || {}).url || __RELEASES__; }
+function download(kind){ window.location.href = dlURL(kind); }
 document.querySelectorAll(".dlopt").forEach(b=>{
   b.onclick = ()=>download(b.dataset.kind);
 });
-/* The hero button downloads whatever the platform check pointed it at. */
-{ const m=$("dlmain"); if(m) m.onclick = ()=>download(m.dataset.kind); }
 /* The old hero button at the top of the page, still there, still the Mac default. */
 { const b=$("dl1"); if(b) b.onclick = ()=>download("dmg"); }
 
@@ -4071,6 +4104,7 @@ document.querySelectorAll(".dlopt").forEach(b=>{
   /* Points the one button at a build and says, on the button, exactly what that is. */
   const aim = (kind, title, note) => {
     main.dataset.kind = kind;
+    main.href = dlURL(kind);
     $("dlmain-title").textContent = title;
     const mb = (DOWNLOADS[kind] || {}).mb || "?";
     $("dlmain-sub").textContent = NAMES[kind] + "  \u00b7  " + kind.toUpperCase() + "  \u00b7  " + mb + " MB";
@@ -4495,8 +4529,8 @@ out = HTML.replace("__DATA__", blob)
 # Pure-ASCII output: json.dumps already escapes the data blob, and this converts the
 # template's punctuation to entities, so no charset assumption can corrupt the page.
 out = out.encode("ascii", "xmlcharrefreplace").decode("ascii")
-out = out.replace("__APPB64__", APP_B64).replace("__APPMB__", APP_MB)
 out = out.replace("__DOWNLOADS__", json.dumps(DOWNLOADS, separators=(",", ":")))
+out = out.replace("__RELEASES__", json.dumps(RELEASES_URL))
 out = out.replace("__ICONB64__", ICON_B64).replace("__REPO__", REPO)
 for _k in ("zip", "dmg", "pkg", "exe"):
     out = out.replace(f"__{_k.upper()}MB__", DOWNLOADS[_k]["mb"])
