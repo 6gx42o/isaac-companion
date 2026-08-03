@@ -17,7 +17,14 @@ use std::sync::{Arc, Mutex};
 /// Binds the first free port, preferring the one the macOS build's dev server uses so
 /// the URL is familiar, and returns it.
 pub fn serve(state: Arc<Mutex<State>>, data: Arc<Data>, running: Arc<AtomicBool>) -> u16 {
-    let listener = match [8731u16, 8732, 8733, 0]
+    // ISAAC_PORT pins the port. Only the test harness sets it: everything else wants
+    // the "first one that is free" behaviour below, because two copies of this on one
+    // machine should not fight over a number.
+    let preferred: Vec<u16> = match std::env::var("ISAAC_PORT").ok().and_then(|v| v.parse().ok()) {
+        Some(p) => vec![p],
+        None => vec![8731, 8732, 8733, 0],
+    };
+    let listener = match preferred
         .iter()
         .find_map(|p| TcpListener::bind(("127.0.0.1", *p)).ok())
     {

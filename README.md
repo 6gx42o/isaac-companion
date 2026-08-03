@@ -12,7 +12,7 @@ log while you play and tells you what your damage and fire rate **actually are**
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-b81f22?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/macOS%2014%2B-universal-e2542b?style=flat-square)](#install)
 [![Windows](https://img.shields.io/badge/Windows-x64-9a7f75?style=flat-square)](#the-windows-build)
-[![Tests](https://img.shields.io/badge/tests-127-7e9c46?style=flat-square)](#tests)
+[![CI](https://img.shields.io/github/actions/workflow/status/6gx42o/isaac-companion/ci.yml?branch=main&style=flat-square&label=tests&color=7e9c46)](https://github.com/6gx42o/isaac-companion/actions/workflows/ci.yml)
 [![No mod required](https://img.shields.io/badge/achievements-still%20count-d9a441?style=flat-square)](#no-mod-required)
 
 <img src="docs/img/overlay-panel.png" width="330" alt="The overlay showing Cain with Ipecac's +21.00 damage and -2.55 tears">

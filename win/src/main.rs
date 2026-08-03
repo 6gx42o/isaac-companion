@@ -105,7 +105,11 @@ fn main() {
              or pass the path as an argument."
         ),
     }
-    open_browser(&url);
+    // A CI runner has no one to show a browser to, and on a headless agent the
+    // launcher can block.
+    if std::env::var("ISAAC_NO_BROWSER").is_err() {
+        open_browser(&url);
+    }
     // The server owns the process from here.
     loop {
         std::thread::sleep(Duration::from_secs(3600));

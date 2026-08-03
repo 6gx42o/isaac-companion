@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  swift:
+    name: Swift tests (macOS)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      # A clean clone is exactly what this needs to prove: the package once declared
+      # VendoredData as a resource with no tracked files in it, so `swift build` failed
+      # for everyone who cloned the repo while working fine on the machine it was
+      # written on. CI is the only place that difference shows up on its own.
+      - name: Build
+        run: swift build --product IsaacCompanionApp
+      - name: Test
+        run: swift test
+      # The tests that need a game install or the EID mod disable themselves rather
+      # than failing, so a runner with neither still proves the pure logic.
+
+  rust:
+    name: Rust tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo --version
+      # bake-data.py is deliberately NOT run here: it reads the built data bundle out of
+      # ~/Library/Application Support, which only exists on a machine with the game. Its
+      # outputs (win/src/*.tsv) are committed precisely so this build needs neither.
+      - name: Test
+        run: cargo test --manifest-path win/Cargo.toml
+
+  windows:
+    name: Windows build and smoke test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --release --manifest-path win/Cargo.toml
+
+      # The point of this job. The .exe was cross-compiled from a Mac and shipped for
+      # months without ever being executed on Windows; static checks cannot tell you
+      # whether it runs. This starts it against a fixture log and asserts what it
+      # actually serves.
+      - name: Run it and check what it serves
+        shell: pwsh
+        timeout-minutes: 3
+        run: |
+          $env:ISAAC_NO_BROWSER = "1"    # nothing on a runner to show a browser to
+          $env:ISAAC_PORT = "8799"       # pinned, so we need not parse stdout for it
+          $exe = "win\target\release\isaac-companion.exe"
+          $proc = Start-Process -FilePath $exe -ArgumentList "win\tests\fixture-log.txt" `
+                                -PassThru -NoNewWindow
+          try {
+            $state = $null
+            foreach ($i in 1..30) {
+              Start-Sleep -Milliseconds 500
+              try {
+                $state = Invoke-RestMethod -Uri "http://127.0.0.1:8799/api/state" -TimeoutSec 5
+                if ($state.seed) { break }
+              } catch { }
+            }
+            if (-not $state) { throw "the server never answered on 8799" }
+            $state | ConvertTo-Json -Depth 4 | Write-Host
+
+            function Assert($what, $got, $want) {
+              if ($got -ne $want) { throw "$what : expected '$want', got '$got'" }
+              Write-Host "  ok  $what = $got"
+            }
+            Assert "seed"      $state.seed          "1HC6 PSQ9"
+            # Subtype 2 is Cain, whose base luck must be 0 -- Lucky Foot is his starting
+            # item and the log reports it as an ordinary pickup.
+            Assert "character" $state.character     "Cain"
+            Assert "stage"     $state.stage         2
+            Assert "pedestals" $state.pedestals     1
+            # Ipecac through the AB+ damage curve. A wrong number here means the stat
+            # model diverged from the Swift one it is meant to mirror.
+            Assert "damage"    $state.damage.value  24.5
+            if ($state.curses -notcontains "Curse of the Blind") {
+              throw "curses: expected Curse of the Blind, got '$($state.curses)'"
+            }
+            Write-Host "  ok  curses = $($state.curses)"
+
+            $names = $state.items | ForEach-Object { $_.name }
+            # Regression: a naive parse stopped at the first ')', which dropped both
+            # 'Odd Mushroom (Thin)' and '(Large)' -- and a dropped removal leaves the
+            # rest of the run reporting the wrong damage.
+            if ($names -contains "Odd Mushroom (Large)") {
+              throw "a removed item is still in the build: $names"
+            }
+            if ($names -notcontains "Ipecac") { throw "Ipecac missing from: $names" }
+            Write-Host "  ok  items = $($names -join ', ')"
+
+            # The page itself, not just the API.
+            $page = Invoke-WebRequest -Uri "http://127.0.0.1:8799/" -TimeoutSec 5
+            if ($page.StatusCode -ne 200) { throw "GET / returned $($page.StatusCode)" }
+            if ($page.Content -notmatch "Isaac") { throw "GET / served something unexpected" }
+            Write-Host "  ok  GET / serves the readout"
+
+            # And that an unknown path is a 404 rather than something worse.
+            try {
+              Invoke-WebRequest -Uri "http://127.0.0.1:8799/nope" -TimeoutSec 5 | Out-Null
+              throw "an unknown path did not 404"
+            } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
+              if ($_.Exception.Response.StatusCode -ne 404) { throw }
+              Write-Host "  ok  unknown path 404s"
+            }
+          } finally {
+            if ($proc -and -not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+          }

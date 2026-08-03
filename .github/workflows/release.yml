@@ -1,0 +1,51 @@
+name: Release
+
+# Tag-driven: `git tag -a v0.3.0 -m v0.3.0 && git push origin v0.3.0`.
+#
+# The Mac artifacts are built here, but they are signed with whatever identity the
+# runner has -- which is none. That matters: the auto-updater refuses any build whose
+# signature does not match the running app's, so a release built here would be offered
+# and then declined by every existing install. Until a Developer ID lives in the repo
+# secrets, cut releases with ./package.sh on a machine that has the signing identity and
+# let this workflow serve as the checksum-and-notes half.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # CFBundleVersion is the commit count
+
+      - name: Check the tag matches VERSION
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          FILE="$(tr -d '[:space:]' < VERSION)"
+          if [ "$TAG" != "$FILE" ]; then
+            echo "tag $GITHUB_REF_NAME does not match VERSION ($FILE)" >&2
+            exit 1
+          fi
+
+      - name: Add the Windows toolchain
+        run: |
+          brew install mingw-w64
+          rustup target add x86_64-pc-windows-gnu
+
+      - name: Package
+        run: ./package.sh
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            dist/*

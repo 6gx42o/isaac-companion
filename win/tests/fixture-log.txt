@@ -1,0 +1,18 @@
+[INFO] - Loading Save Files...
+[INFO] - Binding of Isaac: Afterbirth+ v1.06.T1
+[INFO] - Steam Is Initialized!
+[INFO] - Initializing Physics Thread.
+[INFO] - RNG Start Seed: 1HC6 PSQ9 (3056253244)
+[INFO] - Initialized player with Variant 0 and Subtype 2
+[INFO] - Level::Init m_Stage 1, m_StageType 0
+[INFO] - Room 1.0(Basement)
+[INFO] - Adding collectible 1 (The Sad Onion)
+[INFO] - Level::Init m_Stage 2, m_StageType 0
+[INFO] - Curse of the Blind!
+[INFO] - Room 1.0(Basement)
+[INFO] - Adding collectible 149 (Ipecac)
+[INFO] - Adding collectible 331 (Odd Mushroom (Large))
+[INFO] - Adding collectible 999 (Not A Real Item)
+[INFO] - Removing collectible 331 (Odd Mushroom (Large))
+[INFO] - Room 4.26(Treasure Room)
+[INFO] - Spawn Entity with Type(5), Variant(100), Pos(320.00,280.00), Velocity(0.00,0.00), Seed(1234)

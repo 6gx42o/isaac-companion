@@ -102,7 +102,12 @@ notarise "$BASE.pkg"
 # failed if the toolchain is absent, so a plain Mac checkout still packages.
 if command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1 \
    && rustup target list --installed 2>/dev/null | grep -q x86_64-pc-windows-gnu; then
-  ( cd win && python3 bake-data.py >/dev/null \
+  # bake-data.py regenerates win/src/*.tsv from the built data bundle in Application
+  # Support, so it only works on a machine that has the game. The TSVs are committed
+  # exactly so a build does not need it -- re-bake when we can, carry on when we cannot.
+  ( cd win \
+      && { python3 bake-data.py >/dev/null 2>&1 \
+           || echo "note: keeping the committed item tables (no data bundle to re-bake from)" >&2; } \
       && cargo build --release --target x86_64-pc-windows-gnu >/dev/null 2>&1 )
   EXE="win/target/x86_64-pc-windows-gnu/release/isaac-companion.exe"
   if [ -f "$EXE" ]; then
