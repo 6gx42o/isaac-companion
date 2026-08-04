@@ -5,7 +5,7 @@ Data comes from `ingestctl sitedata`, which measures each sprite's dominant colo
 off the atlas — that is what makes "grey" or "gold" work as a search term when you
 cannot remember an item's name.
 """
-import base64, io, json, pathlib, sys, urllib.request
+import base64, datetime as _dt, io, json, pathlib, sys, urllib.request
 
 from PIL import Image
 
@@ -96,7 +96,37 @@ def release_assets():
     return out, rel.get("tag_name")
 
 
+def download_total():
+    """How many times the app itself has been downloaded, across every release.
+
+    Counts only things a person installs -- the checksum manifest is a verification
+    aid, not a download of the app, and counting it would inflate the figure.
+
+    Baked in at build time rather than fetched by the page. The published page runs
+    under a strict content-security policy that blocks every external request, so a
+    live counter is not available to it; what makes the number current is that the
+    site is rebuilt and republished with each release. The page says when it was
+    taken so the figure is never passed off as live.
+    """
+    api = f"https://api.github.com/repos/{REPO_SLUG}/releases?per_page=100"
+    try:
+        req = urllib.request.Request(api, headers={"User-Agent": "isaac-site-build"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            rels = json.load(r)
+    except Exception as e:                       # noqa: BLE001
+        print(f"  ! could not read download counts ({e}); omitting them")
+        return None, 0
+    total = sum(
+        a["download_count"]
+        for rel in rels
+        for a in rel.get("assets", [])
+        if not a["name"].startswith("SHA256SUMS")
+    )
+    return total, len(rels)
+
+
 ASSETS, TAG = release_assets()
+DOWNLOADS_TOTAL, RELEASE_COUNT = download_total()
 RELEASES_URL = f"https://github.com/{REPO_SLUG}/releases"
 DOWNLOADS = {
     kind: {
@@ -307,7 +337,10 @@ h2{font-family:var(--serif);font-size:clamp(24px,3.4vw,36px);margin:0 0 10px;let
 .ossfact b{font-family:var(--mono);font-size:21px;color:var(--hot);
   font-variant-numeric:tabular-nums}
 .ossfact span{font-family:var(--mono);font-size:9px;letter-spacing:.18em;
-  text-transform:uppercase;color:var(--faint)}
+  text-transform:uppercase;color:var(--faint);display:flex;flex-direction:column;gap:2px}
+/* Dated, because it is a build-time snapshot rather than a live counter -- the page
+   runs under a policy that blocks every external request, so it cannot ask GitHub. */
+.ossfact .asof{font-style:normal;letter-spacing:.1em;opacity:.62;font-size:8px}
 .btn.ghost{border-color:var(--rule2);background:none;color:var(--dim)}
 .btn.ghost:hover{color:var(--ash);border-color:var(--mark)}
 
@@ -2664,13 +2697,13 @@ footer a{color:var(--dim)}
 <div class="view on" id="home">
   <div class="wrap">
     <header class="hero">
-      <p class="eyebrow">macOS &#183; Afterbirth+ &#183; no mod required</p>
+      <p class="eyebrow">macOS &amp; Windows &#183; Afterbirth+ &#183; no mod required</p>
       <h1 id="head"></h1>
       <p class="sell">Isaac never tells you what your stats actually are. This reads the game's
         own log while you play, works out your real damage and fire rate, and warns you when an
         item you just took is <b>doing nothing at all</b>.</p>
       <div class="cta">
-        <button class="btn" id="dl1">Download for macOS &#183; __DMGMB__ MB</button>
+        <button class="btn" id="dl1">Download &#183; __DMGMB__ MB</button>
         <button class="btn ghost" data-goto="index">Browse all 775 items</button>
       </div>
       <div class="specimen">
@@ -2816,8 +2849,9 @@ footer a{color:var(--dim)}
         </div>
         <div class="ossfacts">
           <div class="ossfact"><b>MIT</b><span>licence</span></div>
-          <div class="ossfact"><b>127</b><span>tests</span></div>
+          <div class="ossfact"><b>__TESTS__</b><span>tests</span></div>
           <div class="ossfact"><b>0</b><span>runtime deps</span></div>
+          __DLFACT__
         </div>
       </div>
 
@@ -4137,6 +4171,39 @@ $("dlg").onclick = (e)=>{ if(e.target.id==="dlg") $("dlg").close(); };
 $("q").addEventListener("input", render);
 render();
 
+/* ---- the download counter, live where it can be ----------------------------
+   The number baked in at build time is correct as of the last publish. Where the
+   page is served from an ordinary host, it can do better: GitHub's API sends
+   Access-Control-Allow-Origin, so the count can be fetched and the figure replaced
+   with a live one.
+
+   Inside a published Artifact this fetch is blocked by the content-security policy
+   and simply fails -- which is why the baked number is rendered server-side first
+   rather than left as a placeholder. The page degrades to "correct as of a date"
+   instead of to an empty box. */
+(async () => {
+  const el = document.getElementById("dlcount");
+  const asOf = document.getElementById("dlasof");
+  if (!el) return;
+  try {
+    const r = await fetch(
+      "https://api.github.com/repos/__REPOSLUG__/releases?per_page=100",
+      { headers: { Accept: "application/vnd.github+json" } });
+    if (!r.ok) return;
+    const rels = await r.json();
+    let n = 0;
+    for (const rel of rels) {
+      for (const a of rel.assets || []) {
+        // Checksums are a verification aid, not a download of the app.
+        if (!a.name.startsWith("SHA256SUMS")) n += a.download_count;
+      }
+    }
+    if (!Number.isFinite(n) || n <= 0) return;
+    el.textContent = String(n);
+    if (asOf) asOf.textContent = "live";
+  } catch (e) { /* blocked or offline: the baked figure already says as-of when */ }
+})();
+
 /* ---- downloads ----
    Resolved at build time to GitHub Release URLs, so the page itself still makes no
    network request -- it just holds ordinary links, and the browser fetches only what
@@ -4149,7 +4216,25 @@ document.querySelectorAll(".dlopt").forEach(b=>{
   b.onclick = ()=>download(b.dataset.kind);
 });
 /* The old hero button at the top of the page, still there, still the Mac default. */
-{ const b=$("dl1"); if(b) b.onclick = ()=>download("dmg"); }
+// The hero button follows the same detection as the one on the download page --
+// it used to be hardwired to the dmg, so a Windows visitor who clicked at the top
+// of the page got a Mac disk image.
+{
+  const b = $("dl1");
+  if (b) {
+    const heroKind = () => (document.getElementById("firstrun-win")
+      && !document.getElementById("firstrun-win").hidden) ? "exe" : "dmg";
+    const label = () => {
+      const k = heroKind();
+      const mb = (DOWNLOADS[k] || {}).mb || "?";
+      b.textContent = (k === "exe" ? "Download for Windows" : "Download for macOS")
+        + " \u00b7 " + mb + " MB";
+    };
+    // After the platform check has run and chosen which steps to show.
+    setTimeout(label, 0);
+    b.onclick = () => download(heroKind());
+  }
+}
 
 /* ---- what are you on? ----
    Deliberately NOT trying to tell Apple Silicon from Intel. A browser cannot do it
@@ -4624,6 +4709,17 @@ out = out.encode("ascii", "xmlcharrefreplace").decode("ascii")
 out = out.replace("__DOWNLOADS__", json.dumps(DOWNLOADS, separators=(",", ":")))
 out = out.replace("__RELEASES__", json.dumps(RELEASES_URL))
 out = out.replace("__ICONB64__", ICON_B64).replace("__REPO__", REPO)
+out = out.replace("__TESTS__", "253").replace("__REPOSLUG__", REPO_SLUG)
+# Only shown when the API answered. An absent counter is better than a wrong one, and
+# it is dated so nobody reads a build-time snapshot as a live figure.
+if DOWNLOADS_TOTAL is None:
+    out = out.replace("__DLFACT__", "")
+else:
+    stamp = _dt.date.today().isoformat()
+    out = out.replace(
+        "__DLFACT__",
+        f'<div class="ossfact" id="dlfact"><b id="dlcount">{DOWNLOADS_TOTAL}</b>'
+        f'<span>downloads<i class="asof" id="dlasof">as of {stamp}</i></span></div>')
 for _k in ("zip", "dmg", "pkg", "exe"):
     out = out.replace(f"__{_k.upper()}MB__", DOWNLOADS[_k]["mb"])
 dest = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else HERE / "isaac-site.html")
