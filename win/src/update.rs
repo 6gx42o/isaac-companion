@@ -7,9 +7,10 @@
 //! **How this talks to the network without a dependency.** std has no HTTP client, let
 //! alone TLS, and adding one would end the zero-crate property that makes cross-compiling
 //! this from a Mac reliable. So it shells out to tools Windows already ships:
-//! `curl.exe` (in System32 since Windows 10 1803) for fetching over the OS's own TLS
-//! stack, and `certutil` for the SHA-256. Both are Microsoft's, both are present on any
-//! machine this runs on, and neither adds a byte to the download.
+//! `curl` (in System32 since Windows 10 1803, and standard on Linux) for fetching over
+//! the OS's own TLS stack, and the platform's own hasher for the SHA-256 -- `certutil`
+//! on Windows, `sha256sum` on Linux. All are already on any machine this runs on, and
+//! none adds a byte to the download.
 //!
 //! **Why the file shuffle.** A running .exe cannot be overwritten on Windows -- but it
 //! CAN be renamed. So the live binary is moved aside, the new one takes its name, and the
@@ -19,6 +20,16 @@ use std::path::Path;
 use std::process::Command;
 
 const REPO: &str = "6gx42o/isaac-companion";
+
+/// Which release asset is the build for this platform.
+#[cfg(windows)]
+const ASSET_SUFFIX: &str = "-windows-x64.exe";
+#[cfg(all(unix, not(target_os = "macos")))]
+const ASSET_SUFFIX: &str = "-linux-x64";
+/// The Mac app updates through its own updater, not this one; the suffix exists only so
+/// the code compiles and can be tested here.
+#[cfg(target_os = "macos")]
+const ASSET_SUFFIX: &str = "-linux-x64";
 
 pub struct Available {
     pub tag: String,
@@ -79,7 +90,26 @@ fn download(url: &str, to: &Path) -> bool {
         && to.is_file()
 }
 
-/// SHA-256 via certutil, whose output is a three-line block with the hash in the middle.
+/// SHA-256 via the platform's own tool. Windows ships certutil; Linux ships sha256sum,
+/// whose output is "<hash>  <path>" on one line.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn sha256(path: &Path) -> Option<String> {
+    let out = Command::new("sha256sum").arg(path).output().ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let hash = text.split_whitespace().next()?;
+    (hash.len() == 64).then(|| hash.to_ascii_lowercase())
+}
+
+/// macOS names it shasum; present so the Linux path can be exercised from a Mac.
+#[cfg(target_os = "macos")]
+fn sha256(path: &Path) -> Option<String> {
+    let out = Command::new("shasum").args(["-a", "256"]).arg(path).output().ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let hash = text.split_whitespace().next()?;
+    (hash.len() == 64).then(|| hash.to_ascii_lowercase())
+}
+
+#[cfg(windows)]
 fn sha256(path: &Path) -> Option<String> {
     let out = Command::new("certutil")
         .arg("-hashfile")
@@ -120,14 +150,16 @@ pub fn check(current: &str) -> Option<Available> {
     if !newer(&version, current) {
         return None;
     }
-    // The .exe asset and the checksum manifest, both from the same release.
+    // The build for THIS platform, and the checksum manifest, from the same release.
+    // Fetching the .exe unconditionally would have handed a Linux user a Windows binary
+    // and then verified it faithfully.
     let mut exe_url = None;
     let mut sums_url = None;
     let mut exe_name = String::new();
     for chunk in json.split("\"browser_download_url\":\"").skip(1) {
         let url = chunk.split('"').next().unwrap_or("");
         let name = url.rsplit('/').next().unwrap_or("");
-        if name.ends_with("-windows-x64.exe") {
+        if name.ends_with(ASSET_SUFFIX) {
             exe_name = name.to_string();
             exe_url = Some(url.to_string());
         } else if name == "SHA256SUMS" {
@@ -147,7 +179,10 @@ pub fn check(current: &str) -> Option<Available> {
 pub fn install(update: &Available) -> Result<(), String> {
     let current = std::env::current_exe().map_err(|e| e.to_string())?;
     let dir = current.parent().ok_or("no parent directory")?.to_path_buf();
-    let staged = dir.join("isaac-companion.new.exe");
+    // Derived from the running binary rather than hardcoded: on Linux there is no
+    // ".exe", and naming the staged file that would leave an unrunnable stub behind.
+    let name = current.file_name().and_then(|n| n.to_str()).unwrap_or("isaac-companion");
+    let staged = dir.join(format!("{name}.new"));
 
     let manifest = fetch(&update.sums_url)
         .ok_or("could not fetch SHA256SUMS -- refusing to install unverified")?;
@@ -157,6 +192,14 @@ pub fn install(update: &Available) -> Result<(), String> {
     if !download(&update.exe_url, &staged) {
         return Err("download failed".into());
     }
+    // Everything downloaded arrives without the executable bit on Unix, so a verified
+    // and correctly-placed binary would still refuse to start.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o755));
+    }
+
     let got = sha256(&staged).ok_or("could not hash the download")?;
     if got != expected {
         let _ = std::fs::remove_file(&staged);
@@ -168,8 +211,9 @@ pub fn install(update: &Available) -> Result<(), String> {
         ));
     }
 
-    // A running .exe cannot be overwritten, but it can be renamed out of the way.
-    let old = dir.join("isaac-companion.old.exe");
+    // A running binary cannot be overwritten on Windows, but it can be renamed out of
+    // the way. Unix allows the overwrite, and the same dance is harmless there.
+    let old = dir.join(format!("{name}.old"));
     let _ = std::fs::remove_file(&old);
     std::fs::rename(&current, &old).map_err(|e| format!("could not move the old build: {e}"))?;
     if let Err(e) = std::fs::rename(&staged, &current) {
@@ -183,8 +227,12 @@ pub fn install(update: &Available) -> Result<(), String> {
 /// Deletes the previous build, if one is sitting next to us from a past update.
 pub fn clean_up_after_update() {
     if let Ok(current) = std::env::current_exe() {
-        if let Some(dir) = current.parent() {
-            let _ = std::fs::remove_file(dir.join("isaac-companion.old.exe"));
+        if let (Some(dir), Some(name)) =
+            (current.parent(), current.file_name().and_then(|n| n.to_str()))
+        {
+            // Same derivation as install(): the previous build is named after whatever
+            // this binary is called, which on Linux has no ".exe".
+            let _ = std::fs::remove_file(dir.join(format!("{name}.old")));
         }
     }
 }

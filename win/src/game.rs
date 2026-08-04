@@ -76,7 +76,21 @@ fn is_running() -> bool {
     }
 }
 
-#[cfg(not(any(windows, target_os = "macos")))]
+/// Linux has pgrep too, so the honest answer is available rather than assumed.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn is_running() -> bool {
+    match std::process::Command::new("pgrep")
+        .args(["-f", "isaac-ng"])
+        .output()
+    {
+        Ok(o) => !o.stdout.is_empty(),
+        // Same degradation as everywhere else: an unavailable check must not claim the
+        // game is closed.
+        Err(_) => true,
+    }
+}
+
+#[cfg(not(any(windows, unix)))]
 fn is_running() -> bool {
     true
 }

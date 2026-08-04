@@ -64,6 +64,13 @@ fn find_log() -> Option<PathBuf> {
         "Documents/My Games/Binding of Isaac Rebirth/log.txt",
         // So the build can be exercised on the machine it is cross-compiled from.
         "Library/Application Support/Binding of Isaac Afterbirth+/log.txt",
+        // Linux. The game writes under the XDG data directory, and the folder name is
+        // lowercase -- which only matters here, where the filesystem is case-sensitive
+        // and the Windows spelling would silently miss.
+        ".local/share/binding of isaac afterbirth+/log.txt",
+        ".local/share/binding of isaac repentance/log.txt",
+        ".local/share/binding of isaac afterbirth/log.txt",
+        ".local/share/binding of isaac rebirth/log.txt",
     ];
     names
         .iter()

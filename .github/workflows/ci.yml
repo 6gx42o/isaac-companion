@@ -40,6 +40,70 @@ jobs:
       - name: Test
         run: cargo test --manifest-path win/Cargo.toml
 
+  linux:
+    name: Linux build and smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --release --manifest-path win/Cargo.toml
+
+      # Same reasoning as the Windows job: a binary nobody has executed is a guess. This
+      # starts it against the fixture log and asserts what it actually serves, so the
+      # Linux build cannot drift away from the Mac stat model unnoticed.
+      - name: Run it and check what it serves
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          export ISAAC_NO_BROWSER=1     # nothing on a runner to show a browser to
+          export ISAAC_PORT=8799        # pinned, so we need not parse stdout for it
+          ./win/target/release/isaac-companion win/tests/fixture-log.txt &
+          PID=$!
+          trap 'kill $PID 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            sleep 0.5
+            if curl -fsS "http://127.0.0.1:8799/api/state" -o /tmp/state.json 2>/dev/null; then
+              grep -q '"seed"' /tmp/state.json && break
+            fi
+          done
+          test -s /tmp/state.json || { echo "the server never answered on 8799"; exit 1; }
+          cat /tmp/state.json
+          python3 - <<'PY'
+          import json, sys
+          s = json.load(open("/tmp/state.json"))
+          def assert_eq(what, got, want):
+              if got != want:
+                  sys.exit(f"{what}: expected {want!r}, got {got!r}")
+              print(f"  ok  {what} = {got}")
+          assert_eq("seed", s["seed"], "1HC6 PSQ9")
+          # Subtype 2 is Cain, whose base luck must be 0 -- Lucky Foot is his starting
+          # item and the log reports it as an ordinary pickup.
+          assert_eq("character", s["character"], "Cain")
+          assert_eq("stage", s["stage"], 2)
+          assert_eq("pedestals", s["pedestals"], 1)
+          # Cain + Ipecac through the AB+ damage curve: 3.5*sqrt(40*1.2+1)=24.5 for
+          # Isaac, times Cain's x1.20 multiplier. A wrong number here means the Linux
+          # build diverged from the Swift model it mirrors.
+          assert_eq("damage", s["damage"]["value"], 29.4)
+          if "Curse of the Blind" not in s["curses"]:
+              sys.exit(f"curses: expected Curse of the Blind, got {s['curses']}")
+          print(f"  ok  curses = {s['curses']}")
+          names = [i["name"] for i in s["items"]]
+          # Regression: a naive parse stopped at the first ')', dropping both
+          # 'Odd Mushroom (Thin)' and '(Large)'.
+          for n in ("Odd Mushroom (Thin)", "Odd Mushroom (Large)"):
+              if n not in names:
+                  sys.exit(f"items: {n} missing from {names}")
+          print(f"  ok  bracketed item names survived")
+          PY
+
+      - name: Upload the Linux binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: isaac-companion-linux-x64
+          path: win/target/release/isaac-companion
+          if-no-files-found: error
+
   windows:
     name: Windows build and smoke test
     runs-on: windows-latest
