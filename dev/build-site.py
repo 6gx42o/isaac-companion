@@ -165,6 +165,7 @@ HTML = r"""<title>Isaac Companion &#8212; know what you just picked up</title>
   --mark:#b81f22;--hot:#e2542b;--warn:#d9a441;--good:#7e9c46;
   --glowTop:rgba(184,31,34,.17);--glowBot:rgba(0,0,0,.8);--scan:rgba(0,0,0,.26);
   --bloom:rgba(232,217,198,.15);--bloomHot:rgba(226,84,43,.38);
+  --cursor:rgba(226,84,43,.10);
   --goodLine:#3d4a24;--markLine:#5c1c1e;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   --serif:ui-serif,"New York",Georgia,serif;
@@ -178,6 +179,7 @@ HTML = r"""<title>Isaac Companion &#8212; know what you just picked up</title>
   --mark:#a02b26;--hot:#b8860f;--warn:#a9741a;--good:#5c7a34;
   --glowTop:rgba(226,195,106,.34);--glowBot:rgba(255,255,255,.55);--scan:rgba(120,105,70,.05);
   --bloom:rgba(44,38,32,.07);--bloomHot:rgba(184,134,15,.22);
+  --cursor:rgba(184,134,15,.13);
   --goodLine:#a8bd86;--markLine:#d9a9a3;
 }
 .noT,.noT *,.noT *::before,.noT *::after{transition:none!important}
@@ -191,6 +193,26 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
 body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:900;
   background:repeating-linear-gradient(0deg,var(--scan) 0 1px,transparent 1px 3px)}
 #rain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5}
+
+/* ---- cursor glow ----
+   A soft light under the pointer, so the page reacts to you without anything moving.
+   Deliberately quiet: it sits in the BACKGROUND at z-index 0, under every piece of
+   content, and its peak alpha is low enough that it reads as the page being lit rather
+   than as a thing following the mouse.
+
+   Composited only: a fixed full-viewport element whose gradient never changes, moved by
+   `translate` and faded by `opacity`. Setting background-position or re-declaring the
+   gradient would repaint a screen-sized layer on every mouse move; a transform does not
+   touch paint at all.
+
+   The radius is in vmin so it scales with the window instead of swamping a small one. */
+#glow{position:fixed;top:0;left:0;z-index:0;pointer-events:none;
+  width:44vmin;height:44vmin;margin:-22vmin 0 0 -22vmin;
+  border-radius:50%;
+  background:radial-gradient(circle closest-side,var(--cursor) 0%,transparent 100%);
+  opacity:0;transition:opacity .45s var(--ease);
+  will-change:transform,opacity}
+#glow.on{opacity:1}
 
 /* ---- chrome ---- */
 nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:6px;
@@ -2647,6 +2669,10 @@ footer a{color:var(--dim)}
 </style>
 
 <canvas id="rain"></canvas>
+<!-- After the rain canvas on purpose. Both sit at z-index 0, so among equals the
+     later element paints on top -- placed before it, the canvas covered the glow
+     entirely. Still behind every piece of content, which is at z-index 1. -->
+<div id="glow" aria-hidden="true"></div>
 
 <nav>
   <span class="brand">Isaac <b>Companion</b></span>
@@ -4364,6 +4390,60 @@ document.querySelectorAll(".dlopt").forEach(b=>{
     set("", "Could not tell what you are on. There are builds for macOS&nbsp;14+, "
       + "Windows and Linux.");
   }
+})();
+
+/* ===== the cursor glow ===== */
+(function () {
+  'use strict';
+  const glow = document.getElementById("glow");
+  if (!glow) return;
+
+  // Honour the setting rather than the media query alone: someone who has asked for
+  // less motion should not get a light chasing their pointer.
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  // A coarse pointer has no hover position to signify -- on a touch screen the light
+  // would sit wherever the last tap landed, which is worse than nothing.
+  const fine = matchMedia("(pointer: fine)");
+
+  let tx = 0, ty = 0, x = 0, y = 0, raf = 0, placed = false;
+
+  function frame() {
+    // Ease toward the pointer instead of snapping to it. The lag is what makes it read
+    // as light rather than as a second cursor -- and it costs nothing, being a
+    // transform on a layer whose pixels never change.
+    x += (tx - x) * 0.14;
+    y += (ty - y) * 0.14;
+    glow.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    // Stop once it has effectively arrived, so an idle pointer is not paying for an
+    // animation frame forever.
+    if (Math.abs(tx - x) > 0.5 || Math.abs(ty - y) > 0.5) {
+      raf = requestAnimationFrame(frame);
+    } else {
+      raf = 0;
+    }
+  }
+
+  function onMove(e) {
+    if (still.matches || !fine.matches) return;
+    tx = e.clientX;
+    ty = e.clientY;
+    if (!placed) {
+      // First sighting: jump there rather than sweeping in from the corner.
+      placed = true;
+      x = tx; y = ty;
+      glow.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      glow.classList.add("on");
+    }
+    if (!raf) raf = requestAnimationFrame(frame);
+  }
+
+  addEventListener("pointermove", onMove, { passive: true });
+  // Fade out when the pointer leaves the window, so it is not left lit at an edge.
+  addEventListener("pointerleave", () => glow.classList.remove("on"));
+  addEventListener("pointerenter", () => { if (placed) glow.classList.add("on"); });
+  still.addEventListener("change", () => {
+    if (still.matches) glow.classList.remove("on");
+  });
 })();
 
 /* ===== Items tab dropdown — shared by site + app ===== */
