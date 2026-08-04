@@ -77,6 +77,8 @@ public enum RunEvent: Equatable, Sendable {
     /// A pill dropped on the floor. The line carries no subtype, so this says a pill is
     /// there and where it is -- never which colour, and never which effect.
     case pillSpawned(x: Double, y: Double)
+    /// A tarot card or rune dropped. Same caveat: position, never which card.
+    case cardSpawned(x: Double, y: Double)
     /// `Action PillCard Triggered` -- the pocket slot was used. The game does not say
     /// whether it was a pill or a card, nor which one; it is the only moment the log
     /// admits a consumable was swallowed at all.
@@ -131,6 +133,9 @@ public struct LogParser: Sendable {
     /// carries no subtype -- so the colour has to come off the screen.
     private static let pill =
         re(#"^Spawn Entity with Type\(5\), Variant\(70\), Pos\(([-\d.]+),([-\d.]+)\)"#)
+    /// PickupVariant 300 is PICKUP_TAROTCARD -- cards and runes both.
+    private static let card =
+        re(#"^Spawn Entity with Type\(5\), Variant\(300\), Pos\(([-\d.]+),([-\d.]+)\)"#)
 
     public func parse(line rawLine: String) -> RunEvent? {
         // `.whitespacesAndNewlines` also strips a stray trailing "\r", so a CRLF log
@@ -172,6 +177,10 @@ public struct LogParser: Sendable {
         if let x = group(Self.pill, 1), let y = group(Self.pill, 2),
            let dx = Double(x), let dy = Double(y) {
             return .pillSpawned(x: dx, y: dy)
+        }
+        if let x = group(Self.card, 1), let y = group(Self.card, 2),
+           let dx = Double(x), let dy = Double(y) {
+            return .cardSpawned(x: dx, y: dy)
         }
         if line == "Action PillCard Triggered" { return .pocketItemUsed }
         if let a = group(Self.died, 1), let b = group(Self.died, 2),

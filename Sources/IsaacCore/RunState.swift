@@ -125,6 +125,12 @@ public struct RunReducer: Sendable {
         case .pillSpawned(let x, let y):
             state.pillsOnFloor.append((x, y))
 
+        // Tracked for the same reason pills are: the position says where to look. No
+        // separate list yet because nothing reads one -- the event's job today is to
+        // prompt a pocket read after the pickup.
+        case .cardSpawned:
+            break
+
         case .pocketItemUsed:
             state.pocketUses += 1
 

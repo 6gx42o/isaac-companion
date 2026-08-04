@@ -545,6 +545,7 @@ public final class AppModel {
             // A pill hit the floor. The player has to walk over and pick it up, so look
             // at the pocket slot a moment later rather than now.
             if case .pillSpawned = event { schedulePocketRead(after: 2.5) }
+            if case .cardSpawned = event { schedulePocketRead(after: 2.5) }
 
             // The pocket slot was used. This is the ONLY moment the log admits a
             // consumable was swallowed, and by the time it fires the slot is empty --
@@ -1176,7 +1177,15 @@ public final class AppModel {
             schedulePocketRead(after: 1.5)
             return
         }
-        guard let colour = heldPill else { return }
+        guard let colour = heldPill else {
+            // Something WAS used -- the log said so -- but nothing had been read from
+            // the slot. Runtime spawns (Acid Baby's pills, machines) write no log line,
+            // so no read was ever scheduled. Count the gap where the UI shows it, and
+            // look at the slot now in case another consumable is already waiting.
+            unidentifiedPocketUses += 1
+            schedulePocketRead(after: 1.5)
+            return
+        }
         pills.note(colour: colour)
         if let known = pills.effect(of: colour) {
             manualAdd(itemID: known.effectID, kind: .pill)

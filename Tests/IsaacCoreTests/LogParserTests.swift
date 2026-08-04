@@ -204,6 +204,17 @@ struct PillLogTests {
         }
     }
 
+    @Test("a card on the floor is a pickup of variant 300")
+    func cardSpawn() {
+        let p = LogParser()
+        #expect(
+            p.parse(line: "[INFO] - Spawn Entity with Type(5), Variant(300), Pos(320.00,280.00)")
+                == .cardSpawned(x: 320, y: 280))
+        // Trinkets (350) are floor loot, not pocket consumables -- not a card.
+        #expect(
+            p.parse(line: "Spawn Entity with Type(5), Variant(350), Pos(320.00,280.00)") == nil)
+    }
+
     @Test("using the pocket slot is announced, without saying what was used")
     func pocketUse() {
         let p = LogParser()

@@ -142,12 +142,18 @@ struct PedestalGeometryRegressions {
             line: "[INFO] - Spawn Entity with Type(5), Variant(100), Pos(320.00,280.00)")
         #expect(collectible == .pedestalSpawned(x: 320, y: 280))
         // Other pickups must NOT be read as pedestals: 20 is a coin, 10 a heart.
-        for variant in [0, 10, 20, 30, 40, 50, 300, 350] {
+        for variant in [0, 10, 20, 30, 40, 50, 350] {
             #expect(
                 LogParser().parse(
                     line: "[INFO] - Spawn Entity with Type(5), Variant(\(variant)), Pos(1,2)") == nil,
                 "variant \(variant) must not be a pedestal")
         }
+        // 300 is a tarot card: it now has its own event, and the invariant this test
+        // protects is only that it never masquerades as a pedestal.
+        #expect(
+            LogParser().parse(
+                line: "[INFO] - Spawn Entity with Type(5), Variant(300), Pos(1,2)")
+                == .cardSpawned(x: 1, y: 2))
     }
 }
 

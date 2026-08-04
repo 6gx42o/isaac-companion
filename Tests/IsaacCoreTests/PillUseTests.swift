@@ -52,7 +52,13 @@ struct PillUseTests {
                 cardAlternatives = []
                 return
             }
-            guard let colour = held else { return }
+            // Something was used but nothing had been read -- runtime spawns (Acid
+            // Baby's pills) write no log line, so no read was ever scheduled. The gap
+            // is counted where the UI can show it, never silently dropped.
+            guard let colour = held else {
+                unidentified += 1
+                return
+            }
             memory.note(colour: colour)
             if let known = memory.effect(of: colour) {
                 run.append(known.effectID)
@@ -130,15 +136,18 @@ struct PillUseTests {
         #expect(loop.awaiting == [4], "the other colour is still a mystery")
     }
 
-    /// The log says "PillCard", not "Pill". Using a card with nothing read from the
-    /// pocket slot must not invent a pill.
-    @Test("a use with nothing held is ignored, not guessed")
-    func cardUseIsNotAPill() {
+    /// The log says "PillCard", not "Pill" -- and a runtime-spawned pill (Acid Baby's)
+    /// writes no spawn line, so a use can arrive with nothing ever read. Found live: the
+    /// first real pocket use of the session vanished without a trace. It must not be
+    /// guessed at, but it must not vanish either.
+    @Test("a use with nothing held is counted as unattributed, not guessed and not lost")
+    func nothingHeldIsCountedNotGuessed() {
         var loop = Loop()
         loop.used()
-        #expect(loop.run.isEmpty)
+        #expect(loop.run.isEmpty, "no guess enters the run")
         #expect(loop.awaiting.isEmpty)
         #expect(loop.memory.seen.isEmpty)
+        #expect(loop.unidentified == 1, "but the run admits something was used")
     }
 
     @Test("swallowing empties the slot, so one read is not counted twice")
