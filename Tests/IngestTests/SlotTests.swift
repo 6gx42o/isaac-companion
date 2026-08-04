@@ -23,6 +23,17 @@ struct SlotGrantTests {
                 == SlotGrant(section: .consumables, capacity: 2))
     }
 
+    /// Schoolbag is an Afterbirth+ item, not just a Repentance one -- it is in the
+    /// game's own items.xml with achievement 379. The parser knew about trinkets and
+    /// pocket items and silently ignored it, so a second active never showed.
+    @Test("Reads the active-item slot too")
+    func activeSlot() {
+        #expect(
+            SlotGrants.parse(
+                text: "Allows Isaac to hold 2 active items#The items can be swapped")
+                == SlotGrant(section: .actives, capacity: 2))
+    }
+
     @Test("Does not fire on items that merely mention a trinket or card")
     func noFalsePositives() {
         #expect(SlotGrants.parse(text: "Spawns a random trinket") == nil)
@@ -44,7 +55,9 @@ struct SlotGrantTests {
         #expect(ids.contains(458))
         // Pocket: Starter Deck, Little Baggy, Deep Pockets, Polydactyly.
         #expect(ids.isSuperset(of: [251, 252, 416, 454]))
-        #expect(granting.count == 6, "unexpected extras: \(granting.map(\.name))")
+        // Schoolbag: the active-item slot.
+        #expect(ids.contains(534))
+        #expect(granting.count == 7, "unexpected extras: \(granting.map(\.name))")
 
         #expect(bundle.items.first { $0.id == 139 }?.slots?.section == .trinkets)
         #expect(bundle.items.first { $0.id == 416 }?.slots?.section == .consumables)

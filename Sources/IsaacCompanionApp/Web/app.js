@@ -1083,13 +1083,25 @@ function renderHeld(state) {
     // Slotted sections show "1/2" so a widened slot is visible at a glance; the rest
     // just show how many you have.
     const slotted = section.capacity > 1 || manualOnly;
+    // A slot count is about what you are CARRYING. Used pills and cards live in this
+    // section too -- they are the run's history and where its numbers come from -- but
+    // they hold nothing, so counting them would show "4/2" for two empty hands.
+    const heldRows = rows.filter((r) => !r.consumed);
+    const usedCount = rows.length - heldRows.length;
     head.appendChild(el("h3", null, section.title + (section.capacity > 1 ? "s" : "")));
     head.appendChild(
-      el("span", "muted count", slotted ? `${rows.length}/${section.capacity}` : String(rows.length))
+      el("span", "muted count",
+        slotted ? `${heldRows.length}/${section.capacity}` : String(heldRows.length))
     );
+    if (usedCount) {
+      head.appendChild(
+        el("span", "muted count", `· ${usedCount} used`));
+    }
     if (section.capacity > 1 && section.grantedBy && section.grantedBy.length) {
       const why = el("span", "slot-grant");
-      why.textContent = `+1 slot from ${section.grantedBy.join(", ")}`;
+      why.textContent = section.grantedBy.length === 1
+        ? `2 slots from ${section.grantedBy[0]}`
+        : `2 slots from ${section.grantedBy.join(", ")}`;
       head.appendChild(why);
     }
     group.appendChild(head);
