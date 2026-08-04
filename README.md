@@ -46,7 +46,8 @@ or build it yourself — see [Building](#building).
 | **macOS** | `.dmg`, `.pkg` or `.zip` — one universal binary, Apple Silicon *and* Intel. macOS 14+. |
 | **Windows** | a single `.exe`, no installer and no runtime. |
 
-The macOS build is ad-hoc signed rather than notarised, so clear the quarantine flag
+The macOS build is signed with a self-signed certificate rather than a Developer ID,
+so macOS Gatekeeper will refuse it on first launch. Clear the quarantine flag
 once after installing:
 
 ```sh
