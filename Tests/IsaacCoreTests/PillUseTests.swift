@@ -357,3 +357,57 @@ struct RunFinalisationTests {
         #expect(a.saves == savesAtShutdown, "no pointless writes while the game is closed")
     }
 }
+
+@Suite("Used pocket items are history, not inventory")
+struct ConsumedTests {
+    private func item(_ id: Int, _ name: String, _ kind: ItemKind) -> Item {
+        Item(id: id, name: name, kind: kind, gfx: "", delta: ItemDelta(speed: 0.15))
+    }
+
+    /// The bug this models: eating three pills used to leave the run holding only the
+    /// third, because each swallow displaced the last through the pocket-slot capacity
+    /// rule. Two permanent stat changes simply vanished from the numbers.
+    @Test("swallowing three pills keeps all three")
+    func consumedNeverDisplaced() {
+        var r = RunReducer()
+        var state = RunState()
+        for _ in 0..<3 {
+            r.manualAdd(
+                itemID: 14, name: "Speed Up", kind: .pill, capacity: 1, consumed: true,
+                to: &state)
+        }
+        #expect(state.items.count == 3, "every swallow is permanent")
+        #expect(state.items.filter(\.consumed).count == 3)
+    }
+
+    /// Held pocket items still behave like a slot: picking up a second card with room
+    /// for one drops the first, which is what happens in game.
+    @Test("held pocket items still obey the slot")
+    func heldStillCapped() {
+        var r = RunReducer()
+        var state = RunState()
+        r.manualAdd(itemID: 1, name: "0 - The Fool", kind: .card, capacity: 1, to: &state)
+        r.manualAdd(itemID: 2, name: "I - The Magician", kind: .card, capacity: 1, to: &state)
+        #expect(state.items.count == 1, "one slot, one card")
+        #expect(state.items.first?.itemID == 2, "the newer one is what you are holding")
+    }
+
+    /// The two must not interfere: a card you use does not evict a card you hold, and a
+    /// card you pick up does not evict the record of one you used.
+    @Test("used and held do not displace each other")
+    func independent() {
+        var r = RunReducer()
+        var state = RunState()
+        r.manualAdd(itemID: 1, name: "0 - The Fool", kind: .card, capacity: 1,
+                    consumed: true, to: &state)
+        r.manualAdd(itemID: 2, name: "I - The Magician", kind: .card, capacity: 1, to: &state)
+        r.manualAdd(itemID: 3, name: "II - The High Priestess", kind: .card, capacity: 1,
+                    to: &state)
+        let used = state.items.filter(\.consumed)
+        let held = state.items.filter { !$0.consumed }
+        #expect(used.count == 1, "the used card survived two later pickups")
+        #expect(used.first?.itemID == 1)
+        #expect(held.count == 1, "still only one slot")
+        #expect(held.first?.itemID == 3)
+    }
+}

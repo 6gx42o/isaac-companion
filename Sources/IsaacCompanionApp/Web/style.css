@@ -3380,3 +3380,6 @@ kbd {
   font: inherit;
   font-size: 12.5px;
 }
+
+/* A used pocket item: its effect is already in your numbers. */
+.pill.used { border-color: var(--good); color: var(--good); }

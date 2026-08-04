@@ -141,3 +141,38 @@ struct ManualPickupTests {
         #expect(state.items.allSatisfy { $0.kind == nil })
     }
 }
+
+@Suite("Used pills reach the numbers", .enabled(if: loaded != nil, "no built bundle"))
+struct ConsumedPillStatsTests {
+    let bundle = loaded!
+
+    /// The whole point of tracking uses rather than holdings: a swallowed Speed Up must
+    /// move the speed stat, and three of them must move it three times. Before, pills
+    /// were excluded from the stat engine entirely AND displaced each other in the
+    /// pocket slot, so the answer was 1.00 no matter how many you ate.
+    @Test("three Speed Up pills move speed three times")
+    func speedPillsAccumulate() {
+        guard let speedUp = bundle.items.first(where: { $0.kind == .pill && $0.id == 14 })
+        else {
+            Issue.record("no Speed Up pill in the bundle")
+            return
+        }
+        #expect(speedUp.delta.speed == 0.15, "Speed Up is +0.15")
+
+        let isaac = Character(id: 0, name: "Isaac")
+        let one = StatEngine.compute(character: isaac, items: [speedUp])
+        let three = StatEngine.compute(character: isaac, items: [speedUp, speedUp, speedUp])
+        #expect(abs(one.speed.value - 1.15) < 0.001, "one pill: \(one.speed.value)")
+        #expect(abs(three.speed.value - 1.45) < 0.001, "three pills: \(three.speed.value)")
+    }
+
+    /// Range Down must go DOWN, since a sign error here would read as a buff.
+    @Test("a Range Down pill lowers range")
+    func downPillLowersStat() {
+        guard let rangeDown = bundle.items.first(where: { $0.kind == .pill && $0.id == 11 })
+        else { return }
+        let isaac = Character(id: 0, name: "Isaac")
+        let after = StatEngine.compute(character: isaac, items: [rangeDown])
+        #expect(after.range.value < 23.75, "range \(after.range.value) should be below base")
+    }
+}

@@ -12,13 +12,22 @@ public struct PickupRecord: Sendable, Equatable, Identifiable {
     /// item bundle. Set explicitly for hand-entered trinkets, cards and pills, whose
     /// ids collide with collectible ids (card 1, pill 1 and collectible 1 all exist).
     public var kind: ItemKind?
+    /// A pocket item that has been USED, rather than one being carried.
+    ///
+    /// The distinction is the difference between an inventory and a history, and only
+    /// the history is what the numbers are made of. A pill in your pocket does nothing;
+    /// swallowed, it changes a stat permanently and can never be dropped for another.
+    /// So a consumed record never occupies a pocket slot and is never evicted to make
+    /// room -- and it is the one that counts toward stats and transformations.
+    public var consumed: Bool
     public var id: Int { uid }
 
     public init(
-        uid: Int, itemID: Int, name: String, manual: Bool = false, kind: ItemKind? = nil
+        uid: Int, itemID: Int, name: String, manual: Bool = false, kind: ItemKind? = nil,
+        consumed: Bool = false
     ) {
         self.uid = uid; self.itemID = itemID; self.name = name; self.manual = manual
-        self.kind = kind
+        self.kind = kind; self.consumed = consumed
     }
 }
 
@@ -166,19 +175,28 @@ public struct RunReducer: Sendable {
     /// knows nothing about the item catalogue.
     public mutating func manualAdd(
         itemID: Int, name: String, kind: ItemKind? = nil, capacity: Int = 1,
-        to state: inout RunState
+        consumed: Bool = false, to state: inout RunState
     ) {
         // Slotted kinds do not stack indefinitely: once the slots are full the OLDEST
         // is dropped, matching what happens in game when you walk over a new trinket.
-        if let kind, !kind.isAutoTracked {
-            var sameSection = state.items.filter { $0.kind?.section == kind.section }
+        //
+        // CONSUMED items are exempt, in both directions: they hold no slot, and they are
+        // never evicted to free one. Eating three pills used to leave the run holding
+        // only the third, because each swallow displaced the last -- so two permanent
+        // stat changes vanished from the numbers.
+        if let kind, !kind.isAutoTracked, !consumed {
+            var sameSection = state.items.filter {
+                $0.kind?.section == kind.section && !$0.consumed
+            }
             while sameSection.count >= max(1, capacity) {
                 let oldest = sameSection.removeFirst()
                 state.items.removeAll { $0.uid == oldest.uid }
             }
         }
         state.items.append(
-            PickupRecord(uid: nextUID, itemID: itemID, name: name, manual: true, kind: kind))
+            PickupRecord(
+                uid: nextUID, itemID: itemID, name: name, manual: true, kind: kind,
+                consumed: consumed))
         nextUID += 1
     }
 

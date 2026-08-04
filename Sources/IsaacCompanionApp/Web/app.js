@@ -1034,6 +1034,10 @@ function heldRow(held) {
   const pill = confidencePill(held.confidence);
   if (pill) head.appendChild(pill);
   if (held.manual) head.appendChild(el("span", "pill manual", "manual"));
+  // A used pocket item is history, not inventory: its effect is permanent and it is
+  // holding no slot. Saying so is the difference between "you have a pill" and "that
+  // pill already changed your speed".
+  if (held.consumed) head.appendChild(el("span", "pill used", "used"));
   body.appendChild(head);
   // The reason it is dead outranks its own description — that is the thing you
   // need, and the description is now mostly irrelevant.

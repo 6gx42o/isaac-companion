@@ -204,7 +204,7 @@ public final class AppModel {
     private func summarise(started: Date, inProgress: Bool) -> RunSummary {
         // Recomputed rather than read off `stats`: within one batch of log lines the
         // cached value can still belong to the previous run.
-        let owned = run.items.compactMap { resolve($0) }.filter { $0.kind.isAutoTracked }
+        let owned = statAffecting()
         let who =
             bundle?.characters.first { $0.id == run.playerType }
             ?? Characters.resolve(run.playerType)
@@ -642,13 +642,15 @@ public final class AppModel {
         }
     }
 
-    public func manualAdd(itemID: Int, kind: ItemKind? = nil) {
+    /// `consumed` marks a pocket item that was USED rather than picked up. Used items
+    /// hold no slot, are never displaced, and are what the stat model counts.
+    public func manualAdd(itemID: Int, kind: ItemKind? = nil, consumed: Bool = false) {
         let item = kind.flatMap { manualByKind[Pair($0, itemID)] } ?? itemsByID[itemID]
         guard let item else { return }
         reducer.manualAdd(
             itemID: itemID, name: item.name,
             kind: item.kind.isAutoTracked ? nil : item.kind,
-            capacity: capacity(of: item.kind.section), to: &run)
+            capacity: capacity(of: item.kind.section), consumed: consumed, to: &run)
         recompute()
     }
 
@@ -773,12 +775,32 @@ public final class AppModel {
         recompute()
     }
 
+    /// Everything currently changing the run's numbers.
+    ///
+    /// Not the same as "everything picked up". Three rules, and each is a different
+    /// reason:
+    ///   - collectibles count once taken, and cannot be lost;
+    ///   - trinkets count while WORN, so a trinket swapped out stops counting;
+    ///   - cards and pills count only once USED. Held, a pill has done nothing; that is
+    ///     the whole point of the consumed flag.
+    func statAffecting() -> [Item] {
+        run.items.compactMap { record -> Item? in
+            guard let item = resolve(record) else { return nil }
+            if item.kind.isAutoTracked { return item }
+            switch item.kind {
+            case .trinket: return item                    // worn
+            case .card, .pill: return record.consumed ? item : nil
+            default: return nil
+            }
+        }
+    }
+
     private func recompute() {
         let table =
             bundle?.characters.first { $0.id == run.playerType } ?? Characters.resolve(run.playerType)
         // A reading taken off the game's own HUD beats anything in the table.
         character = table.measured(with: measuredBases.measurement(for: run.playerType))
-        let owned = run.items.compactMap { resolve($0) }.filter { $0.kind.isAutoTracked }
+        let owned = statAffecting()
         stats = StatEngine.compute(character: character, items: owned)
     }
 
@@ -808,6 +830,9 @@ public final class AppModel {
                 /// name in JS, so the UI and the verdicts can never disagree.
                 var dead: Bool
                 var deadReason: String?
+                /// A pocket item that was USED rather than one being carried. Used ones
+                /// are what the numbers are made of; a held pill has done nothing yet.
+                var consumed: Bool
             }
             var ready: Bool
             var gameRunning: Bool
@@ -906,7 +931,8 @@ public final class AppModel {
                 section: kind.section.rawValue,
                 kind: kind.rawValue,
                 dead: reason != nil,
-                deadReason: reason)
+                deadReason: reason,
+                consumed: record.consumed)
         }
 
         var statMap: [String: Payload.StatOut] = [:]
@@ -945,7 +971,7 @@ public final class AppModel {
                     }
                 }
             }
-            progress = engine.transformationProgress(held: heldItems)
+            progress = engine.transformationProgress(held: statAffecting())
                 .map { Progress(name: $0.0.name, have: $0.1, need: $0.0.threshold) }
         }
 
@@ -1239,7 +1265,7 @@ public final class AppModel {
             // Leaving it set kept the page saying "in your pocket" about a card that
             // had already been used, with no re-read scheduled to correct it.
             if heldCardAlternatives.count <= 1 {
-                manualAdd(itemID: card, kind: .card)
+                manualAdd(itemID: card, kind: .card, consumed: true)
             } else {
                 unidentifiedPocketUses += 1
             }
@@ -1259,7 +1285,7 @@ public final class AppModel {
         }
         pills.note(colour: colour)
         if let known = pills.effect(of: colour) {
-            manualAdd(itemID: known.effectID, kind: .pill)
+            manualAdd(itemID: known.effectID, kind: .pill, consumed: true)
         } else {
             pillsAwaitingID.append(colour)
         }
@@ -1341,7 +1367,7 @@ public final class AppModel {
         // pill you most want counted -- it is the one that told you what the colour does.
         let owed = pillsAwaitingID.filter { $0 == colour }.count
         pillsAwaitingID.removeAll { $0 == colour }
-        for _ in 0..<owed { manualAdd(itemID: effectID, kind: .pill) }
+        for _ in 0..<owed { manualAdd(itemID: effectID, kind: .pill, consumed: true) }
     }
 
     public func forgetPill(colour: Int) { pills.forget(colour: colour) }
