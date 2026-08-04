@@ -40,7 +40,7 @@ into Isaac, and your trophies keep counting.
 
 ## Install
 
-Grab a build from **[the download page](https://claude.ai/code/artifact/5d9c3018-7a5c-4216-96b8-54ae83aea5b6)**,
+Grab a build from **[the download page](https://6gx42o.github.io/isaac-companion/)**,
 or build it yourself — see [Building](#building).
 
 | | |
