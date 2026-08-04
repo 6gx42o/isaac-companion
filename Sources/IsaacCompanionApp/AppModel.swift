@@ -534,6 +534,8 @@ public final class AppModel {
                 pillsAwaitingID.removeAll()
                 unidentifiedPocketUses = 0
                 clearPocket()
+                floorPillColour = nil
+                floorPillAmbiguous = false
                 continue
             }
             guard let event = parser.parse(line: line) else { continue }
@@ -550,11 +552,23 @@ public final class AppModel {
                 pillsAwaitingID.removeAll()
                 unidentifiedPocketUses = 0
                 clearPocket()
+                floorPillColour = nil
+                floorPillAmbiguous = false
             }
-            // A pill hit the floor. The player has to walk over and pick it up, so look
-            // at the pocket slot a moment later rather than now.
-            if case .pillSpawned = event { schedulePocketRead(after: 2.5) }
+            // A pill hit the floor, and the log said exactly where. Read its colour off
+            // the FLOOR while it still sits there -- the pocket slot is a losing race
+            // against a player who grabs and swallows in under a second, which a whole
+            // session of empty slot reads proved. The slot read still follows as the
+            // backup, and it is what sees cards.
+            if case .pillSpawned(let x, let y) = event {
+                scheduleFloorPillRead(at: (x, y), after: 0.7)
+                schedulePocketRead(after: 2.5)
+            }
             if case .cardSpawned = event { schedulePocketRead(after: 2.5) }
+            if case .roomEntered = event {
+                floorPillColour = nil
+                floorPillAmbiguous = false
+            }
 
             // The pocket slot was used. This is the ONLY moment the log admits a
             // consumable was swallowed, and by the time it fires the slot is empty --
@@ -1119,6 +1133,14 @@ public final class AppModel {
     /// so the run view can admit the gap instead of quietly under-reporting.
     public private(set) var unidentifiedPocketUses = 0
 
+    /// The colour of the one pill read off the FLOOR of the current room, if exactly one
+    /// has been seen. nil when none was read; nil again the moment a second distinct
+    /// colour appears, because attributing a swallow between two candidates would be a
+    /// guess. Cleared on room change -- what was on the last room's floor says nothing
+    /// about this one.
+    private var floorPillColour: Int?
+    private var floorPillAmbiguous = false
+
     /// Debounce for the automatic read. A pill spawning is a cue to look at the pocket
     /// slot shortly afterwards, not to look immediately -- the player has to walk over
     /// and pick it up first.
@@ -1196,11 +1218,12 @@ public final class AppModel {
             schedulePocketRead(after: 1.5)
             return
         }
-        guard let colour = heldPill else {
+        guard let colour = heldPill ?? consumeFloorPill() else {
             // Something WAS used -- the log said so -- but nothing had been read from
-            // the slot. Runtime spawns (Acid Baby's pills, machines) write no log line,
-            // so no read was ever scheduled. Count the gap where the UI shows it, and
-            // look at the slot now in case another consumable is already waiting.
+            // the slot and no lone floor pill offers an answer. Runtime spawns (Acid
+            // Baby's pills, machines) write no log line, so no read was ever scheduled.
+            // Count the gap where the UI shows it, and look at the slot now in case
+            // another consumable is already waiting.
             unidentifiedPocketUses += 1
             schedulePocketRead(after: 1.5)
             return
@@ -1214,6 +1237,36 @@ public final class AppModel {
         // The slot is empty now. A second pill needs a fresh look.
         heldPill = nil
         schedulePocketRead(after: 1.5)
+    }
+
+    /// The floor pill as the answer for a swallow, if it is unambiguous. Consuming it
+    /// clears it: one floor read answers one use.
+    private func consumeFloorPill() -> Int? {
+        guard !floorPillAmbiguous, let colour = floorPillColour else { return nil }
+        floorPillColour = nil
+        return colour
+    }
+
+    private func scheduleFloorPillRead(at position: (x: Double, y: Double), after seconds: Double) {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard let self, self.gameProcessRunning else { return }
+            let stripURL = DataPaths.dataDir(.abplus).appending(path: "pills.png")
+            guard let data = try? Data(contentsOf: stripURL),
+                  let image = NSImage(data: data)?
+                    .cgImage(forProposedRect: nil, context: nil, hints: nil)
+            else { return }
+            guard let match = try? await self.scanner.readFloorPill(
+                at: position, pillStrip: image) else { return }
+            self.pills.note(colour: match.index)
+            if let existing = self.floorPillColour, existing != match.index {
+                // Two distinct colours in one room: attributing a swallow between them
+                // would be a coin flip, and this app does not flip coins.
+                self.floorPillAmbiguous = true
+            } else {
+                self.floorPillColour = match.index
+            }
+        }
     }
 
     /// Reads the pocket slot shortly from now, replacing any read already pending.

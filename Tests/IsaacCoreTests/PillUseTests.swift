@@ -221,3 +221,91 @@ struct PocketUseTests {
         #expect(loop.run == [7], "the card was used, not the pill")
     }
 }
+
+@Suite("Floor pills - answering the swallow the slot read misses")
+struct FloorPillTests {
+    /// Model of the floor-read attribution: a pill read off the floor answers a later
+    /// swallow, but only while it is the sole candidate, and never across rooms.
+    private struct Floor {
+        var loop = PillUseTests.Loop()
+        var floorColour: Int?
+        var ambiguous = false
+
+        mutating func sawOnFloor(_ colour: Int) {
+            loop.memory.note(colour: colour)
+            if let existing = floorColour, existing != colour {
+                ambiguous = true
+            } else {
+                floorColour = colour
+            }
+        }
+
+        mutating func newRoom() {
+            floorColour = nil
+            ambiguous = false
+        }
+
+        mutating func used() {
+            if loop.held == nil, loop.heldCard == nil, !ambiguous, let c = floorColour {
+                floorColour = nil
+                loop.sawInPocket(c)
+            }
+            loop.used()
+        }
+    }
+
+    /// The session that motivated this: every slot read came back empty because the
+    /// player swallows within a second of grabbing. The floor read is taken while the
+    /// pill still sits at its logged spawn position, so the swallow gets its answer.
+    @Test("a lone floor pill answers the swallow the slot never saw")
+    func lonePillAnswers() {
+        var f = Floor()
+        f.sawOnFloor(6)
+        f.used()
+        #expect(f.loop.awaiting == [6], "attributed to the floor colour, parked for naming")
+        #expect(f.floorColour == nil, "one read answers one use")
+    }
+
+    @Test("a named floor colour goes straight into the run")
+    func namedColourCounts() {
+        var f = Floor()
+        f.loop.identify(6, as: 14)                    // Speed Up, learned earlier
+        f.sawOnFloor(6)
+        f.used()
+        #expect(f.loop.run == [14], "no interaction needed at all")
+    }
+
+    /// Two distinct colours in one room: attributing between them is a coin flip, and
+    /// the app does not flip coins. The use stays unattributed and visible.
+    @Test("two floor colours make the swallow unattributable")
+    func twoColoursIsAmbiguous() {
+        var f = Floor()
+        f.sawOnFloor(3)
+        f.sawOnFloor(9)
+        f.used()
+        #expect(f.loop.awaiting.isEmpty)
+        #expect(f.loop.unidentified == 1, "counted, not guessed")
+    }
+
+    /// What was on the last room's floor says nothing about this one.
+    @Test("a room change forgets the floor")
+    func roomChangeForgets() {
+        var f = Floor()
+        f.sawOnFloor(5)
+        f.newRoom()
+        f.used()
+        #expect(f.loop.unidentified == 1, "no stale answer crossed the door")
+        #expect(f.loop.awaiting.isEmpty)
+    }
+
+    /// A slot read that DID see the pill wins over the floor deduction -- it is direct
+    /// observation of the thing actually held.
+    @Test("a held pill beats the floor deduction")
+    func heldBeatsFloor() {
+        var f = Floor()
+        f.sawOnFloor(3)
+        f.loop.sawInPocket(8)                          // the slot read caught it
+        f.used()
+        #expect(f.loop.awaiting == [8], "the observed colour, not the deduced one")
+    }
+}

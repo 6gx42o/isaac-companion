@@ -313,6 +313,38 @@ final class RoomScanner {
         return best
     }
 
+    /// Reads the colour of a pill lying ON THE FLOOR, at the position the spawn line
+    /// gave. This exists because the pocket slot is a losing race: a player who grabs
+    /// and swallows leaves the slot occupied for under a second, and every slot read of
+    /// an entire session came back empty. The floor position, by contrast, is known the
+    /// moment the log announces it, while the pill just sits there.
+    func readFloorPill(at position: (x: Double, y: Double), pillStrip: CGImage)
+        async throws -> SpriteColourReader.Match?
+    {
+        if pillReader == nil {
+            pillReader = SpriteColourReader(strip: pillStrip, side: SpriteColourReader.pillSide)
+        }
+        guard let reader = pillReader else { throw ScanError.noAtlas }
+        let shot = try await captureGameWindow()
+        guard let rect = Self.screenRect(
+            forRoomPosition: CGPoint(x: position.x, y: position.y),
+            in: CGSize(width: shot.width, height: shot.height)),
+            let crop = shot.cropping(to: rect)
+        else { return nil }
+        if ProcessInfo.processInfo.environment["ISAAC_SCAN_DEBUG"] == "1" {
+            Self.dump(crop, name: "floor-pill-\(Int(position.x))-\(Int(position.y))")
+        }
+        let scale = min(CGFloat(shot.width) / 480, CGFloat(shot.height) / 270)
+        let window = max(12, Int((16 * scale).rounded()))
+        guard let hit = reader.best(in: crop, window: window, stride: 2) else {
+            log("floor pill at (\(Int(position.x)),\(Int(position.y))): no confident colour")
+            return nil
+        }
+        log("floor pill at (\(Int(position.x)),\(Int(position.y))): colour \(hit.match.index) "
+                + String(format: "%.3f", hit.match.score))
+        return hit.match
+    }
+
     /// Writes an image to the scratch dir so a failing scan can actually be looked at.
     private static func dump(_ image: CGImage, name: String) {
         let dir = ProcessInfo.processInfo.environment["ISAAC_SCAN_DUMP_DIR"]
