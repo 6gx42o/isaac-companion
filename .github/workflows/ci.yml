@@ -89,13 +89,24 @@ jobs:
               sys.exit(f"curses: expected Curse of the Blind, got {s['curses']}")
           print(f"  ok  curses = {s['curses']}")
           names = [i["name"] for i in s["items"]]
-          # Regression: a naive parse stopped at the first ')', dropping both
-          # 'Odd Mushroom (Thin)' and '(Large)'.
-          for n in ("Odd Mushroom (Thin)", "Odd Mushroom (Large)"):
-              if n not in names:
-                  sys.exit(f"items: {n} missing from {names}")
-          print(f"  ok  bracketed item names survived")
+          # Regression: a naive parse stopped at the first ')', which dropped both
+          # 'Odd Mushroom (Thin)' and '(Large)' -- and a dropped REMOVAL leaves the
+          # item in the build and the rest of the run reporting the wrong damage. So
+          # what is asserted is that the removal landed.
+          if "Odd Mushroom (Large)" in names:
+              sys.exit(f"a removed item is still in the build: {names}")
+          if "Ipecac" not in names:
+              sys.exit(f"Ipecac missing from {names}")
+          print(f"  ok  items = {', '.join(names)}")
           PY
+
+          # The page itself and the browser endpoint, matching the Windows job's reach.
+          curl -fsS "http://127.0.0.1:8799/" | grep -q "Isaac" \
+            || { echo "GET / served something unexpected"; exit 1; }
+          echo "  ok  GET / serves the readout"
+          curl -fsS "http://127.0.0.1:8799/api/items?q=brimstone" | grep -qi "brimstone" \
+            || { echo "the item search returned nothing for brimstone"; exit 1; }
+          echo "  ok  the item browser answers"
 
       - name: Upload the Linux binary
         uses: actions/upload-artifact@v4
