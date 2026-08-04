@@ -41,6 +41,7 @@ final class RoomScanner {
     enum ScanError: LocalizedError {
         case noPermission
         case gameWindowNotFound
+        case gameNotVisible
         case noAtlas
 
         var errorDescription: String? {
@@ -50,6 +51,8 @@ final class RoomScanner {
                     + "Grant it in System Settings > Privacy & Security > Screen Recording."
             case .gameWindowNotFound:
                 "Could not find the Isaac window — is the game running?"
+            case .gameNotVisible:
+                "The game is running but not on screen — switch to it and scan again."
             case .noAtlas:
                 "Sprite atlas is missing; rebuild the data first."
             }
@@ -185,6 +188,16 @@ final class RoomScanner {
                 configuration: config)
         } catch {
             log("window capture failed (\(error.localizedDescription)); trying the display")
+            // The display fallback captures what the SCREEN shows and crops to the game
+            // window's frame -- which is only the game if the game's Space is the one on
+            // screen. The first real capture ever taken proved the failure mode: the scan
+            // fired while another Space was frontmost, and the "game" frame contained a
+            // chat window. The confidence floor stopped a false match that time, but
+            // pocket reads fire automatically, so refusing is the only safe answer.
+            guard window.isOnScreen else {
+                log("game window is not on screen; refusing the display fallback")
+                throw ScanError.gameNotVisible
+            }
             guard let display = content.displays.first(where: {
                 CGRect(
                     x: CGFloat($0.frame.origin.x), y: CGFloat($0.frame.origin.y),
