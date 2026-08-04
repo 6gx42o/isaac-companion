@@ -4844,6 +4844,46 @@ else:
         f'<span>downloads<i class="asof" id="dlasof">as of {stamp}</i></span></div>')
 for _k in ("zip", "dmg", "pkg", "exe"):
     out = out.replace(f"__{_k.upper()}MB__", DOWNLOADS[_k]["mb"])
+SITE_URL = "https://6gx42o.github.io/isaac-companion/"
+BLURB = ("Live stats, 775 items and synergy warnings for The Binding of Isaac: "
+         "Afterbirth+. Reads the game's own log -- no mod, so achievements still count.")
+
+
+def standalone(fragment):
+    """Wrap the fragment in a real document, for hosts that do not supply one.
+
+    The page is built for the Artifact runtime, which injects `<!doctype html><head>`
+    around it. GitHub Pages serves the file verbatim, so without this the document has
+    no viewport meta (mobile renders the desktop layout zoomed out) and no link-preview
+    tags. `<title>` is hoisted because a title inside `<body>` is not reliably read as
+    the document title; `<style>` is left where it is, which is valid HTML5.
+    """
+    import re
+    title = "Isaac Companion"
+    m = re.search(r"<title>(.*?)</title>", fragment, re.S)
+    if m:
+        title, fragment = m.group(1), fragment.replace(m.group(0), "", 1)
+    return (
+        '<!doctype html>\n<html lang="en">\n<head>\n'
+        '<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
+        f"<title>{title}</title>\n"
+        f'<meta name="description" content="{BLURB}">\n'
+        '<meta name="theme-color" content="#080405">\n'
+        f'<link rel="icon" href="data:image/png;base64,{ICON_B64}">\n'
+        '<meta property="og:type" content="website">\n'
+        f'<meta property="og:title" content="{title}">\n'
+        f'<meta property="og:description" content="{BLURB}">\n'
+        f'<meta property="og:url" content="{SITE_URL}">\n'
+        f'<meta property="og:image" content="{SITE_URL}icon.png">\n'
+        '<meta name="twitter:card" content="summary">\n'
+        f"</head>\n<body>\n{fragment}\n</body>\n</html>\n")
+
+
 dest = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else HERE / "isaac-site.html")
+if "--standalone" in sys.argv[2:]:
+    out = standalone(out)
+    # og:image must be an absolute URL, so the icon cannot stay a data URI here.
+    (dest.parent / "icon.png").write_bytes((HERE / "icon256.png").read_bytes())
 dest.write_text(out)
 print(f"wrote {dest} ({len(out)/1024:.0f} KB)")
