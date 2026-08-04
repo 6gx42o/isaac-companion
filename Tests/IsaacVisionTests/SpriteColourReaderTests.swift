@@ -45,7 +45,11 @@ struct SpriteColourReaderTests {
         for i in 0..<reader.templates.count {
             let crop = try #require(
                 full.cropping(to: CGRect(x: i * cell, y: 0, width: cell, height: cell)))
-            let prepared = SpriteColourReader.rgba(crop, side: SpriteColourReader.pillSide)
+            // Trimmed, because that is what a correctly-sized search window contains:
+            // the sprite filling the frame, not a padded atlas cell around it.
+            let prepared = SpriteColourReader.rgba(
+                SpriteColourReader.trimmed(crop),
+                width: SpriteColourReader.pillSide, height: SpriteColourReader.pillSide)
             let rgb = try #require(prepared?.0, "could not read colour \(i)")
             let ranked = reader.scores(candidate: rgb)
 
@@ -79,12 +83,19 @@ struct SpriteColourReaderTests {
         ctx.setFillColor(CGColor(red: 0.42, green: 0.31, blue: 0.24, alpha: 1))
         ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
         ctx.interpolationQuality = .none
-        let sprite = try #require(
+        let padded = try #require(
             full.cropping(to: CGRect(x: wanted * cell, y: 0, width: cell, height: cell)))
-        ctx.draw(sprite, in: CGRect(x: at.x, y: at.y, width: 32, height: 32))
+        // The game draws the ART, not the padded atlas cell it is filed in, so the
+        // fixture must too -- otherwise the search window frames 17px of pill inside
+        // 32px of nothing and matches a template that is all pill.
+        let sprite = SpriteColourReader.trimmed(padded)
+        ctx.draw(
+            sprite,
+            in: CGRect(x: at.x, y: at.y, width: CGFloat(sprite.width), height: CGFloat(sprite.height)))
         let haystack = try #require(ctx.makeImage())
 
-        let search = reader.best(in: haystack, window: 32, stride: 4)
+        // The window bounds the drawn art: pill sprites trim to about 17x17.
+        let search = reader.best(in: haystack, windowW: 17, windowH: 17, stride: 1)
         let found = try #require(search, "found no pill at all")
         #expect(found.match.index == wanted, "found colour \(found.match.index)")
         // And roughly where it was put, not somewhere else that happened to score well.
@@ -106,6 +117,6 @@ struct SpriteColourReaderTests {
         ctx.setFillColor(CGColor(red: 0.42, green: 0.31, blue: 0.24, alpha: 1))
         ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
         let empty = try #require(ctx.makeImage())
-        #expect(reader.best(in: empty, window: 32, stride: 8) == nil, "named a pill on bare floor")
+        #expect(reader.best(in: empty, windowW: 32, windowH: 32, stride: 8) == nil, "named a pill on bare floor")
     }
 }

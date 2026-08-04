@@ -63,32 +63,43 @@ public struct SpriteColourReader: Sendable {
 
     /// Templates are square; this is their side in pixels. Pills are a handful of flat
     /// colour blocks and need very little; cards carry actual artwork and need more.
-    /// Pills: flat colour blocks, so very little resolution is needed.
+    /// Pills: flat colour blocks, so very little resolution is needed. Square, because
+    /// the sprite is.
     public static let pillSide = 16
-    /// Cards: real artwork, and the confusable pairs differ in small details.
-    public static let cardSide = 28
+    /// Cards: real artwork, and the confusable pairs differ in small details. NOT square
+    /// -- the game's own ui_cardspills.anm2 draws card faces as 16x24 frames, and the
+    /// harvested art inside them is a uniform 14x18. Comparing that through a square
+    /// grid was the whole reason a held card never identified: the sprite was resampled
+    /// to an aspect it is never drawn at.
+    public static let cardW = 21
+    public static let cardH = 27
 
-    public let side: Int
+    /// Template grid. Not necessarily square.
+    public let width: Int
+    public let height: Int
     public let templates: [Template]
 
-    public init(side: Int, templates: [Template]) {
-        self.side = side
+    public init(width: Int, height: Int, templates: [Template]) {
+        self.width = width
+        self.height = height
         self.templates = templates
     }
 
     /// Builds from arbitrary sprites, keyed by whatever id the caller wants back --
     /// a card id, a pill colour index.
-    public init?(side: Int, sprites: [(id: Int, image: CGImage)]) {
+    public init?(width: Int, height: Int, sprites: [(id: Int, image: CGImage)]) {
         let built = sprites.compactMap {
-            Self.template(index: $0.id, from: $0.image, side: side)
+            Self.template(index: $0.id, from: $0.image, width: width, height: height)
         }
         guard !built.isEmpty else { return nil }
-        self.side = side
+        self.width = width
+        self.height = height
         self.templates = built
     }
 
     /// Slices a harvested strip (one row of square cells) into one template per cell.
     public init?(strip: CGImage, side: Int = 16) {
+        // Strips are square cells by construction.
         let h = strip.height
         guard h > 0, strip.width % h == 0 else { return nil }
         let count = strip.width / h
@@ -96,17 +107,50 @@ public struct SpriteColourReader: Sendable {
         for i in 0..<count {
             guard let cell = strip.cropping(
                 to: CGRect(x: i * h, y: 0, width: h, height: h)),
-                let t = Self.template(index: i, from: cell, side: side)
+                let t = Self.template(index: i, from: cell, width: side, height: side)
             else { continue }
             built.append(t)
         }
         guard !built.isEmpty else { return nil }
-        self.side = side
+        self.width = side
+        self.height = side
         self.templates = built
     }
 
-    static func template(index: Int, from image: CGImage, side: Int) -> Template? {
-        guard let (rgb, alpha) = Self.rgba(image, side: side) else { return nil }
+    /// Crops an image to the bounding box of its opaque pixels.
+    ///
+    /// Load-bearing. The atlas stores every sprite padded into a uniform 32x32 cell, so
+    /// a card's 14x18 art fills under half of it -- while the same card on screen fills
+    /// its window almost entirely. Resampling both to one grid then compared art against
+    /// padding, and no card ever identified. A template is the SPRITE, not the cell it
+    /// happens to be filed in.
+    public static func trimmed(_ image: CGImage) -> CGImage {
+        let w = image.width, h = image.height
+        var buffer = [UInt8](repeating: 0, count: w * h * 4)
+        guard let ctx = CGContext(
+            data: &buffer, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return image }
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        var minX = w, minY = h, maxX = -1, maxY = -1
+        for y in 0..<h {
+            for x in 0..<w where buffer[(y * w + x) * 4 + 3] > 127 {
+                minX = Swift.min(minX, x); maxX = Swift.max(maxX, x)
+                minY = Swift.min(minY, y); maxY = Swift.max(maxY, y)
+            }
+        }
+        guard maxX >= minX, maxY >= minY else { return image }
+        return image.cropping(
+            to: CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1))
+            ?? image
+    }
+
+    static func template(
+        index: Int, from image: CGImage, width: Int, height: Int
+    ) -> Template? {
+        guard let (rgb, alpha) = Self.rgba(Self.trimmed(image), width: width, height: height)
+        else { return nil }
         let mask = alpha.map { $0 > 0.5 }
         let opaque = mask.filter { $0 }.count
         // A cell that is entirely transparent would match any background perfectly.
@@ -144,13 +188,13 @@ public struct SpriteColourReader: Sendable {
     /// them blends the two halves of a two-tone pill into one average that no longer
     /// distinguishes it from its neighbours on the strip.
     public static func rgba(
-        _ image: CGImage, side: Int, smooth: Bool = false
+        _ image: CGImage, width: Int, height: Int, smooth: Bool = false
     ) -> ([SIMD3<Float>], [Float])? {
-        let count = side * side
+        let count = width * height
         var buffer = [UInt8](repeating: 0, count: count * 4)
         guard let ctx = CGContext(
-            data: &buffer, width: side, height: side, bitsPerComponent: 8,
-            bytesPerRow: side * 4, space: CGColorSpaceCreateDeviceRGB(),
+            data: &buffer, width: width, height: height, bitsPerComponent: 8,
+            bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
         // Nearest for TEMPLATES: they come from the atlas at native resolution, where
@@ -163,7 +207,7 @@ public struct SpriteColourReader: Sendable {
         // lost to three others in the same 0.55-0.65 band -- the sprites were not being
         // compared so much as their aliasing was.
         ctx.interpolationQuality = smooth ? .high : .none
-        ctx.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
 
         var rgb = [SIMD3<Float>](repeating: .zero, count: count)
         var alpha = [Float](repeating: 0, count: count)
@@ -260,19 +304,22 @@ public struct SpriteColourReader: Sendable {
     /// own scaling, and searching a small region is more robust than hardcoding a
     /// rectangle that is one patch away from being wrong.
     ///
-    /// - Parameter window: the side of the search window, in `haystack` pixels. Should be
-    ///   roughly the on-screen size of the sprite being looked for.
-    public func best(in haystack: CGImage, window: Int, stride: Int = 2)
-        -> (match: Match, rect: CGRect)?
-    {
-        guard window > 0, stride > 0,
-              haystack.width >= window, haystack.height >= window else { return nil }
+    /// - Parameters:
+    ///   - windowW: width of the search window in `haystack` pixels.
+    ///   - windowH: height. Should be the sprite's on-screen size, at ITS aspect --
+    ///     a card is drawn 14x18, not square.
+    public func best(
+        in haystack: CGImage, windowW: Int, windowH: Int, stride: Int = 2
+    ) -> (match: Match, rect: CGRect)? {
+        guard windowW > 0, windowH > 0, stride > 0,
+              haystack.width >= windowW, haystack.height >= windowH else { return nil }
         var bestFound: (match: Match, rect: CGRect)?
-        for y in Swift.stride(from: 0, through: haystack.height - window, by: stride) {
-            for x in Swift.stride(from: 0, through: haystack.width - window, by: stride) {
-                let rect = CGRect(x: x, y: y, width: window, height: window)
+        for y in Swift.stride(from: 0, through: haystack.height - windowH, by: stride) {
+            for x in Swift.stride(from: 0, through: haystack.width - windowW, by: stride) {
+                let rect = CGRect(x: x, y: y, width: windowW, height: windowH)
                 guard let crop = haystack.cropping(to: rect),
-                      let (rgb, _) = Self.rgba(crop, side: side, smooth: true),
+                      let (rgb, _) = Self.rgba(
+                        crop, width: width, height: height, smooth: true),
                       Self.variance(of: rgb) >= Self.candidateVarianceFloor,
                       let top = scores(candidate: rgb).first
                 else { continue }

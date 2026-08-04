@@ -254,8 +254,11 @@ final class RoomScanner {
             else { return nil }
             return (id, crop)
         }
+        // Card faces are 14x18 in the harvest, drawn by the HUD from 16x24 frames --
+        // never square. See SpriteColourReader.cardW/cardH.
         cardReader = SpriteColourReader(
-            side: SpriteColourReader.cardSide, sprites: sprites)
+            width: SpriteColourReader.cardW, height: SpriteColourReader.cardH,
+            sprites: sprites)
     }
 
     /// Reads whatever is in the pocket slot -- a card or a pill.
@@ -306,23 +309,32 @@ final class RoomScanner {
 
         // Cards are drawn larger than pills in the slot.
         if let reader = cardReader,
-           // 32 game px, because that is the template's own cell size -- the art fills
-           // only 14x18 of it, and a window sized to the visible art would compare the
-           // sprite against a resampling of itself at the wrong scale.
-           let hit = reader.best(in: corner, window: max(16, Int((32 * scale).rounded())), stride: 2),
+           // The card as the HUD draws it, from the game's own ui_cardspills.anm2: the
+           // CardFronts animation uses 16x24 frames, and the art inside them is a
+           // uniform 14x18. The window is the FRAME, because the drawn card includes
+           // its dark border -- 15x20 measured against a real capture, where 14x18
+           // clipped the border and 16x24 swallowed background either side.
+           let hit = reader.best(
+            in: corner,
+            windowW: max(8, Int((15 * scale).rounded())),
+            windowH: max(10, Int((20 * scale).rounded())), stride: 2),
            hit.match.score > bestScore {
             bestScore = hit.match.score
             // Re-read the winning window to collect anything indistinguishable from it.
             var ids = [hit.match.index]
             if let crop = corner.cropping(to: hit.rect),
-               let (rgb, _) = SpriteColourReader.rgba(crop, side: reader.side) {
+               let (rgb, _) = SpriteColourReader.rgba(
+                crop, width: reader.width, height: reader.height, smooth: true) {
                 let tied = reader.ranked(candidate: rgb).best.map(\.index)
                 if tied.count > 1 { ids = tied.sorted() }
             }
             best = .card(ids: ids, confidence: hit.match.score)
         }
         if let reader = pillReader,
-           let hit = reader.best(in: corner, window: max(12, Int((32 * scale).rounded())), stride: 2),
+           let hit = reader.best(
+            in: corner,
+            windowW: max(8, Int((17 * scale).rounded())),
+            windowH: max(8, Int((17 * scale).rounded())), stride: 2),
            hit.match.score > bestScore {
             bestScore = hit.match.score
             best = .pill(colour: hit.match.index, confidence: hit.match.score)
@@ -353,8 +365,11 @@ final class RoomScanner {
             Self.dump(crop, name: "floor-pill-\(Int(position.x))-\(Int(position.y))")
         }
         let scale = min(CGFloat(shot.width) / 480, CGFloat(shot.height) / 270)
-        let window = max(12, Int((16 * scale).rounded()))
-        guard let hit = reader.best(in: crop, window: window, stride: 2) else {
+        // Pill art trims to about 17 game px square; the window bounds the art, since
+        // templates are now the sprite rather than the padded cell it is stored in.
+        let window = max(12, Int((17 * scale).rounded()))
+        guard let hit = reader.best(in: crop, windowW: window, windowH: window, stride: 2)
+        else {
             log("floor pill at (\(Int(position.x)),\(Int(position.y))): no confident colour")
             return nil
         }

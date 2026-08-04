@@ -54,7 +54,7 @@ struct CardReaderTests {
         let sprites = cardSprites()
         #expect(sprites.count >= 50, "AB+ has 54 cards and runes, got \(sprites.count)")
         let reader = try #require(
-            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+            SpriteColourReader(width: SpriteColourReader.cardW, height: SpriteColourReader.cardH, sprites: sprites))
         #expect(reader.templates.count == sprites.count)
     }
 
@@ -65,12 +65,15 @@ struct CardReaderTests {
     func eachCardIsItself() throws {
         let sprites = cardSprites()
         let reader = try #require(
-            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+            SpriteColourReader(width: SpriteColourReader.cardW, height: SpriteColourReader.cardH, sprites: sprites))
 
         var wrong: [String] = []
         var thinnest = (id: -1, gap: 1.0)
         for sprite in sprites {
-            let prepared = SpriteColourReader.rgba(sprite.image, side: SpriteColourReader.cardSide)
+            // Trimmed: a correctly-sized window frames the art, not the padded cell.
+            let prepared = SpriteColourReader.rgba(
+                SpriteColourReader.trimmed(sprite.image),
+                width: SpriteColourReader.cardW, height: SpriteColourReader.cardH)
             let rgb = try #require(prepared?.0)
             let (best, runnerUp) = reader.ranked(candidate: rgb)
             // Either it is named, or it is one of a set the game gives identical art --
@@ -100,9 +103,11 @@ struct CardReaderTests {
     func identicalArtIsAmbiguous() throws {
         let sprites = cardSprites()
         let reader = try #require(
-            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+            SpriteColourReader(width: SpriteColourReader.cardW, height: SpriteColourReader.cardH, sprites: sprites))
         let blank = try #require(sprites.first { $0.id == 40 })
-        let prepared = SpriteColourReader.rgba(blank.image, side: SpriteColourReader.cardSide)
+        let prepared = SpriteColourReader.rgba(
+            SpriteColourReader.trimmed(blank.image),
+            width: SpriteColourReader.cardW, height: SpriteColourReader.cardH)
         let rgb = try #require(prepared?.0)
         let (best, _) = reader.ranked(candidate: rgb)
         #expect(best.count == 2, "expected a tied pair, got \(best.map(\.index))")
@@ -116,12 +121,15 @@ struct CardReaderTests {
     func suitsAreDistinct() throws {
         let sprites = cardSprites()
         let reader = try #require(
-            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+            SpriteColourReader(width: SpriteColourReader.cardW, height: SpriteColourReader.cardH, sprites: sprites))
         // Cards 39-43 are the suit cards in AB+ (2 of Diamonds, Clubs, Spades, Hearts,
         // Ace of...). Whichever ids they are, they are adjacent and must not collide.
         // 40/41 excluded: the game draws them identically, covered by its own test.
         for sprite in sprites where (38...48).contains(sprite.id) && ![40, 41].contains(sprite.id) {
-            let prepared = SpriteColourReader.rgba(sprite.image, side: SpriteColourReader.cardSide)
+            // Trimmed: a correctly-sized window frames the art, not the padded cell.
+            let prepared = SpriteColourReader.rgba(
+                SpriteColourReader.trimmed(sprite.image),
+                width: SpriteColourReader.cardW, height: SpriteColourReader.cardH)
             let rgb = try #require(prepared?.0)
             let ranked = reader.scores(candidate: rgb)
             #expect(
@@ -134,7 +142,7 @@ struct CardReaderTests {
     func emptySlot() throws {
         let sprites = cardSprites()
         let reader = try #require(
-            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+            SpriteColourReader(width: SpriteColourReader.cardW, height: SpriteColourReader.cardH, sprites: sprites))
         let W = 120, H = 90
         let made = CGContext(
             data: nil, width: W, height: H, bitsPerComponent: 8, bytesPerRow: W * 4,
@@ -144,7 +152,7 @@ struct CardReaderTests {
         ctx.setFillColor(CGColor(red: 0.42, green: 0.31, blue: 0.24, alpha: 1))
         ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
         let empty = try #require(ctx.makeImage())
-        #expect(reader.best(in: empty, window: 26, stride: 8) == nil, "named a card on bare floor")
+        #expect(reader.best(in: empty, windowW: 26, windowH: 26, stride: 8) == nil, "named a card on bare floor")
     }
 }
 
@@ -158,7 +166,7 @@ struct FlatBackgroundTests {
     func flatBlackMatchesNothing() throws {
         let sprites = cardSprites()
         let reader = try #require(
-            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+            SpriteColourReader(width: SpriteColourReader.cardW, height: SpriteColourReader.cardH, sprites: sprites))
         for shade: CGFloat in [0.0, 0.04, 0.10] {
             let W = 200, H = 150
             let made = CGContext(
@@ -169,7 +177,7 @@ struct FlatBackgroundTests {
             ctx.setFillColor(CGColor(red: shade, green: shade, blue: shade, alpha: 1))
             ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
             let flat = try #require(ctx.makeImage())
-            let hit = reader.best(in: flat, window: 24, stride: 6)
+            let hit = reader.best(in: flat, windowW: 24, windowH: 24, stride: 6)
             #expect(hit == nil, "flat \(shade) matched card \(hit?.match.index ?? -1)")
         }
     }
@@ -180,7 +188,7 @@ struct FlatBackgroundTests {
     func realCardOnBlackStillMatches() throws {
         let sprites = cardSprites()
         let reader = try #require(
-            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+            SpriteColourReader(width: SpriteColourReader.cardW, height: SpriteColourReader.cardH, sprites: sprites))
         let wanted = 4                                   // III - The Empress, mid-toned
         let sprite = try #require(sprites.first { $0.id == wanted }?.image)
         let W = 200, H = 150
@@ -192,11 +200,14 @@ struct FlatBackgroundTests {
         ctx.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
         ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
         ctx.interpolationQuality = .none
-        ctx.draw(sprite, in: CGRect(x: 88, y: 60, width: 24, height: 24))
+        // Draw the ART at a card's aspect, as the HUD does -- not the padded cell.
+        let art = SpriteColourReader.trimmed(sprite)
+        ctx.draw(art, in: CGRect(x: 88, y: 50, width: 30, height: 40))
         let frame = try #require(ctx.makeImage())
         // Stride 2, as production uses: CGContext draws bottom-up, so the sprite's
         // top-left lands off any coarser grid and the only aligned window misses it.
-        let hit = try #require(reader.best(in: frame, window: 24, stride: 2), "found nothing")
+        let hit = try #require(
+            reader.best(in: frame, windowW: 30, windowH: 40, stride: 2), "found nothing")
         #expect(hit.match.index == wanted, "read card \(hit.match.index)")
     }
 }
@@ -224,13 +235,13 @@ struct LiveCaptureTests {
     func emptySlotStaysEmpty() throws {
         let sprites = cardSprites()
         let reader = try #require(
-            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+            SpriteColourReader(width: SpriteColourReader.cardW, height: SpriteColourReader.cardH, sprites: sprites))
         let capture = try #require(emptySlotCapture)
         // One production window size, coarser stride: the false positive appeared at
         // dozens of window positions, so a stride-6 sweep still lands on plenty of
         // them -- and an unoptimised test build cannot afford the full stride-2 sweep
         // (that is release-mode work; it blew a ten-minute test timeout here).
-        if let hit = reader.best(in: capture, window: 63, stride: 6) {
+        if let hit = reader.best(in: capture, windowW: 63, windowH: 63, stride: 6) {
             Issue.record("named card \(hit.match.index) at \(hit.match.score)")
         }
     }
@@ -243,30 +254,23 @@ private let pocketCardCapture = liveFixture("pocket-justice-card.png")
 struct LivePocketTests {
     /// A real bottom-right pocket crop holding VIII - Justice (card 9).
     ///
-    /// The reader does NOT identify it yet, and this test pins the property that matters
-    /// while it does not: it must never name a DIFFERENT card. Measured, every candidate
-    /// window here scores in a 0.55-0.65 band with card 9 peaking at 0.61 and losing to
-    /// three others -- so the 0.72 floor correctly yields nothing rather than a wrong
-    /// answer, and the UI asks the player instead of misinforming them.
-    ///
-    /// What is left is geometry, not matching. The template's art fills 14x18 of a 32x32
-    /// atlas cell while the HUD draws the card at its own scale and aspect, so a square
-    /// window over the screen sprite does not put the art where the template's mask
-    /// expects it. Fixing it properly means reading the HUD's own layout out of the
-    /// game's files, the way the room grid already is -- not fitting constants to one
-    /// screenshot.
-    @Test("an unidentifiable pocket card is never named as the wrong card")
-    func neverNamesTheWrongCard() throws {
+    /// Read at the geometry the game itself specifies: ui_cardspills.anm2 draws card
+    /// faces from 16x24 frames, and the harvested art inside them is a uniform 14x18.
+    /// Matching that through a square grid was why a held card never identified -- the
+    /// sprite was being compared at an aspect it is never drawn at.
+    @Test("the card actually in the pocket slot is identified")
+    func identifiesTheHeldCard() throws {
         let sprites = cardSprites()
         let reader = try #require(
-            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+            SpriteColourReader(
+                width: SpriteColourReader.cardW, height: SpriteColourReader.cardH,
+                sprites: sprites))
         let capture = try #require(pocketCardCapture)
-        for window in [80, 101, 120] where capture.width >= window {
-            if let hit = reader.best(in: capture, window: window, stride: 4) {
-                #expect(
-                    hit.match.index == 9,
-                    "named card \(hit.match.index) for a slot holding card 9")
-            }
-        }
+        // 15x20 game px at this capture's scale (1512/480 = 3.15) -- the drawn frame
+        // including its border, which is what the HUD puts on screen.
+        let hit = try #require(
+            reader.best(in: capture, windowW: 47, windowH: 63, stride: 2),
+            "found nothing in the slot")
+        #expect(hit.match.index == 9, "read card \(hit.match.index), expected 9 (VIII - Justice)")
     }
 }
