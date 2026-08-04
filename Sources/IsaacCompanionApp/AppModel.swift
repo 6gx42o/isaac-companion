@@ -177,8 +177,13 @@ public final class AppModel {
     /// exists. There is no "run over" line in the log to hang this on.
     private func archiveCurrentRun(inProgress: Bool = false) {
         guard didInitialReplay, let started = runStartedAt, run.seed != nil else { return }
-        // A seed with nothing in it is the menu, not a run.
-        guard !run.items.isEmpty || run.stage > 1 else { return }
+        // "Has items" cannot distinguish a run from a reset: most characters START with
+        // an item the log reports as a pickup (Cain's Lucky Foot filed three two-second
+        // "runs" in one minute of reset-scumming for a seed). A run is worth keeping if
+        // it went anywhere -- left the first floor, ended in a death, or simply lasted
+        // longer than seed-hunting does.
+        let lasted = Date().timeIntervalSince(started)
+        guard run.stage > 1 || run.death != nil || lasted > 60 else { return }
         let summary = summarise(started: started, inProgress: inProgress)
         do {
             try archive.save(summary)
