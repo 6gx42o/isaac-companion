@@ -147,3 +147,91 @@ struct CardReaderTests {
         #expect(reader.best(in: empty, window: 26, stride: 8) == nil, "named a card on bare floor")
     }
 }
+
+@Suite("Flat background", .enabled(if: atlas != nil, "no built data on this machine"))
+struct FlatBackgroundTests {
+    /// The live false positive, as a fixture: an empty pocket slot over black room
+    /// background was announced as A Card Against Humanity at 0.92, because that card
+    /// is almost entirely black and colour distance cannot tell flat-equals-flat from
+    /// sprite-equals-sprite. A window with no edges must never match anything.
+    @Test("flat black is not A Card Against Humanity, or anything else")
+    func flatBlackMatchesNothing() throws {
+        let sprites = cardSprites()
+        let reader = try #require(
+            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+        for shade: CGFloat in [0.0, 0.04, 0.10] {
+            let W = 200, H = 150
+            let made = CGContext(
+                data: nil, width: W, height: H, bitsPerComponent: 8, bytesPerRow: W * 4,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            let ctx = try #require(made)
+            ctx.setFillColor(CGColor(red: shade, green: shade, blue: shade, alpha: 1))
+            ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
+            let flat = try #require(ctx.makeImage())
+            let hit = reader.best(in: flat, window: 24, stride: 6)
+            #expect(hit == nil, "flat \(shade) matched card \(hit?.match.index ?? -1)")
+        }
+    }
+
+    /// The guard must not kill real matches: a sprite dropped onto the same black
+    /// background still identifies, because the sprite itself carries the variance.
+    @Test("a real card on black background still identifies")
+    func realCardOnBlackStillMatches() throws {
+        let sprites = cardSprites()
+        let reader = try #require(
+            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+        let wanted = 4                                   // III - The Empress, mid-toned
+        let sprite = try #require(sprites.first { $0.id == wanted }?.image)
+        let W = 200, H = 150
+        let made = CGContext(
+            data: nil, width: W, height: H, bitsPerComponent: 8, bytesPerRow: W * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        let ctx = try #require(made)
+        ctx.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
+        ctx.interpolationQuality = .none
+        ctx.draw(sprite, in: CGRect(x: 88, y: 60, width: 24, height: 24))
+        let frame = try #require(ctx.makeImage())
+        // Stride 2, as production uses: CGContext draws bottom-up, so the sprite's
+        // top-left lands off any coarser grid and the only aligned window misses it.
+        let hit = try #require(reader.best(in: frame, window: 24, stride: 2), "found nothing")
+        #expect(hit.match.index == wanted, "read card \(hit.match.index)")
+    }
+}
+
+/// Captures from the user's own play sessions, kept outside the repository (they show
+/// the game's art) -- the tests skip where they are absent. Each one pins a failure
+/// that actually happened on screen, which no synthetic fixture fully reproduces.
+private func liveFixture(_ name: String) -> CGImage? {
+    let url = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .appending(path: "LiveFixtures/\(name)")
+    guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+    return CGImageSourceCreateImageAtIndex(src, 0, nil)
+}
+
+private let emptySlotCapture = liveFixture("empty-slot-black-room.png")
+
+@Suite("Live captures", .enabled(if: emptySlotCapture != nil && atlas != nil,
+                                 "no live fixtures on this machine"))
+struct LiveCaptureTests {
+    /// The first automatic pocket read ever taken: an empty slot over a black room,
+    /// announced as A Card Against Humanity at 0.92 because that card is almost
+    /// entirely black. This exact capture must never name a card again.
+    @Test("the live false positive stays dead")
+    func emptySlotStaysEmpty() throws {
+        let sprites = cardSprites()
+        let reader = try #require(
+            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+        let capture = try #require(emptySlotCapture)
+        // One production window size, coarser stride: the false positive appeared at
+        // dozens of window positions, so a stride-6 sweep still lands on plenty of
+        // them -- and an unoptimised test build cannot afford the full stride-2 sweep
+        // (that is release-mode work; it blew a ten-minute test timeout here).
+        if let hit = reader.best(in: capture, window: 63, stride: 6) {
+            Issue.record("named card \(hit.match.index) at \(hit.match.score)")
+        }
+    }
+}

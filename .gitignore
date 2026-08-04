@@ -28,3 +28,7 @@ Resources/*.iconset/
 Sources/IsaacCompanionApp/VendoredData/eid.abplus.json
 
 .DS_Store
+
+# Live captures contain the game's art, which stays out of the repository like all
+# other game art. The tests that read these skip when absent.
+Tests/IsaacVisionTests/LiveFixtures/

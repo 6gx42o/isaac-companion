@@ -25,6 +25,10 @@ public struct SpriteColourReader: Sendable {
         /// True where the sprite is opaque. Comparisons only look here.
         public let mask: [Bool]
         public let opaqueCount: Int
+        /// Masked luminance with the mask's mean removed, and its norm -- the sprite's
+        /// light/dark PATTERN, separated from its colours. See `scores`.
+        public let lumCentred: [Float]
+        public let lumNorm: Float
     }
 
     public struct Match: Sendable, Equatable {
@@ -36,7 +40,26 @@ public struct SpriteColourReader: Sendable {
     /// Below this, say nothing. An empty pocket slot and a dark room both produce a
     /// best-of-N that means nothing, and naming the wrong card is worse than naming none
     /// -- the whole point is to stop the player guessing.
-    public static let confidenceFloor = 0.82
+    ///
+    /// Calibrated to the two-term score. A genuine sighting that is resampled and a
+    /// pixel or two off lands around 0.78-0.9 (colour high, structure merely good);
+    /// the worst adversarial case measured -- a dark window with a stray bright sliver
+    /// preferring the almost-black card -- lands at 0.57, because structural agreement
+    /// is absent and the colour term is capped at 0.6 of the score. 0.72 sits between
+    /// with margin on both sides. The old floor of 0.82 belonged to the colour-only
+    /// metric and would reject real sightings under the new one.
+    public static let confidenceFloor = 0.72
+
+    /// A candidate window flatter than this cannot be a sprite, whatever it scores.
+    ///
+    /// Found live, first session: A Card Against Humanity is an almost entirely black
+    /// card, so a window of flat black room background matched it at 0.92 and an empty
+    /// pocket slot was announced as that card. Colour distance cannot tell "the same
+    /// flat colour" from "the same sprite" -- but a real sprite always has edges, so
+    /// the mean squared deviation from the window's own mean colour separates the two
+    /// cleanly. Flat black measures ~0.0; the dimmest real sprite an order of
+    /// magnitude above this.
+    public static let candidateVarianceFloor: Float = 0.0025
 
     /// Templates are square; this is their side in pixels. Pills are a handful of flat
     /// colour blocks and need very little; cards carry actual artwork and need more.
@@ -88,7 +111,31 @@ public struct SpriteColourReader: Sendable {
         let opaque = mask.filter { $0 }.count
         // A cell that is entirely transparent would match any background perfectly.
         guard opaque >= 8 else { return nil }
-        return Template(index: index, rgb: rgb, mask: mask, opaqueCount: opaque)
+        let (lum, norm) = Self.centredLuminance(rgb, mask: mask, count: opaque)
+        return Template(
+            index: index, rgb: rgb, mask: mask, opaqueCount: opaque,
+            lumCentred: lum, lumNorm: norm)
+    }
+
+    /// Luminance over the mask with the masked mean removed. Off-mask entries are zero,
+    /// so a plain dot product over the whole array correlates only where the sprite is.
+    static func centredLuminance(
+        _ rgb: [SIMD3<Float>], mask: [Bool], count: Int
+    ) -> ([Float], Float) {
+        let weights = SIMD3<Float>(0.299, 0.587, 0.114)
+        var lum = [Float](repeating: 0, count: rgb.count)
+        var mean: Float = 0
+        for i in rgb.indices where mask[i] {
+            lum[i] = (rgb[i] * weights).sum()
+            mean += lum[i]
+        }
+        mean /= Float(max(count, 1))
+        var norm: Float = 0
+        for i in rgb.indices where mask[i] {
+            lum[i] -= mean
+            norm += lum[i] * lum[i]
+        }
+        return (lum, norm.squareRoot())
     }
 
     /// Resamples to `side` x `side` and returns straight (un-premultiplied) RGB plus alpha.
@@ -124,19 +171,45 @@ public struct SpriteColourReader: Sendable {
     }
 
     /// Scores one prepared candidate against every template, best first.
+    ///
+    /// Two terms, both needed, each covering the other's blind spot:
+    ///
+    ///  - COLOUR: mean RGB distance over the sprite's own mask. Tells the thirteen
+    ///    same-shaped pills apart, which is the reason this type exists at all.
+    ///  - STRUCTURE: correlation of mask-mean-centred luminance -- does the light and
+    ///    dark PATTERN of the sprite appear in the window? Found necessary live: A Card
+    ///    Against Humanity is almost entirely black, so by colour alone a dark window
+    ///    with any stray bright pixel preferred it over every real answer, and an empty
+    ///    slot was announced as that card. Colour cannot tell flat-matches-flat from
+    ///    sprite-matches-sprite; the pattern term can, because a real sighting places
+    ///    the template's own bright pixels where the template has them.
+    ///
+    /// Weighted so that a perfect colour match with NO structural agreement lands well
+    /// under `confidenceFloor`, while genuine sightings -- which agree on both -- stay
+    /// comfortably above it.
     public func scores(candidate: [SIMD3<Float>]) -> [Match] {
         templates.compactMap { t -> Match? in
             guard t.opaqueCount > 0 else { return nil }
             var total: Float = 0
             for i in 0..<t.rgb.count where t.mask[i] {
                 let d = t.rgb[i] - candidate[i]
-                // Euclidean in RGB. Crude as colour science, but these are thirteen
-                // flat, saturated, well-separated sprites, not a photograph.
+                // Euclidean in RGB. Crude as colour science, but these are flat,
+                // saturated, well-separated sprites, not a photograph.
                 total += (d * d).sum().squareRoot()
             }
             // sqrt(3) is the largest possible distance between two RGB points.
-            let mean = total / Float(t.opaqueCount) / Float(3.0.squareRoot())
-            return Match(index: t.index, score: Double(1 - mean))
+            let meanDistance = total / Float(t.opaqueCount) / Float(3.0.squareRoot())
+            let colour = Double(1 - meanDistance)
+
+            let (candLum, candNorm) = Self.centredLuminance(
+                candidate, mask: t.mask, count: t.opaqueCount)
+            var structure = 0.0
+            if t.lumNorm > 1e-4 && candNorm > 1e-4 {
+                var dot: Float = 0
+                for i in t.lumCentred.indices { dot += t.lumCentred[i] * candLum[i] }
+                structure = Double(max(0, dot / (t.lumNorm * candNorm)))
+            }
+            return Match(index: t.index, score: colour * (0.6 + 0.4 * structure))
         }
         .sorted { $0.score > $1.score }
     }
@@ -154,6 +227,20 @@ public struct SpriteColourReader: Sendable {
         guard let top = all.first else { return ([], nil) }
         let tied = all.prefix { top.score - $0.score <= tieWithin }
         return (Array(tied), all.dropFirst(tied.count).first)
+    }
+
+    /// Mean squared deviation of a window from its own mean colour -- the flatness test.
+    static func variance(of rgb: [SIMD3<Float>]) -> Float {
+        guard !rgb.isEmpty else { return 0 }
+        var mean = SIMD3<Float>.zero
+        for v in rgb { mean += v }
+        mean /= Float(rgb.count)
+        var total: Float = 0
+        for v in rgb {
+            let d = v - mean
+            total += (d * d).sum()
+        }
+        return total / Float(rgb.count)
     }
 
     /// Finds the best pill anywhere in a larger image, by sliding a square window.
@@ -175,6 +262,7 @@ public struct SpriteColourReader: Sendable {
                 let rect = CGRect(x: x, y: y, width: window, height: window)
                 guard let crop = haystack.cropping(to: rect),
                       let (rgb, _) = Self.rgba(crop, side: side),
+                      Self.variance(of: rgb) >= Self.candidateVarianceFloor,
                       let top = scores(candidate: rgb).first
                 else { continue }
                 if bestFound == nil || top.score > bestFound!.match.score {
