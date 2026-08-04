@@ -95,8 +95,19 @@ code{font-family:var(--mono);font-size:12px;color:var(--ash)}
 .setrow .d{color:var(--dim);font-size:12.5px;margin:3px 0 0}
 .setrow select,.setrow input[type=number]{background:var(--panel);border:1px solid var(--rule2);
   color:var(--ash);padding:6px 9px;border-radius:2px;font:inherit;font-size:13px}
+
+/* A new version, offered where it can be seen. The check runs on start; installing is
+   still an explicit choice, and the download is verified against the checksum published
+   with the release before anything is replaced. */
+#updatebar{margin:0 0 14px;padding:11px 14px;border:1px solid #6b5f2a;border-radius:3px;
+  background:#1a1710;color:#e8d9c6;font-size:13px;display:flex;gap:12px;align-items:center;
+  flex-wrap:wrap}
+#updatebar b{color:#d9a441}
+#updatebar code{background:#0e0b07;padding:2px 7px;border-radius:2px;font-size:12px;
+  color:#cbbfa6}
 </style>
 <div class="wrap">
+  <div id="updatebar" hidden></div>
   <div class="tabs">
     <button class="tab on" data-page="run">Run</button>
     <button class="tab" data-page="items">Items</button>
@@ -411,5 +422,21 @@ document.querySelectorAll(".tab").forEach((t)=>{
     loaded.forEach((p)=>load(p)); };
   paintArtNote();
 }
+
+// Ask once, on load, what the background check found. Not polled: a release does not
+// appear mid-session, and this must never compete with the state poll.
+(async () => {
+  try {
+    const r = await fetch("/api/update", {cache:"no-store"});
+    const j = await r.json();
+    if (!j.available) return;
+    const bar = document.getElementById("updatebar");
+    bar.innerHTML = "<span><b>" + j.available + "</b> is available.</span>"
+      + "<span>Close this, then run <code>isaac-companion.exe --update</code> "
+      + "to download and install it. The download is checked against the checksum "
+      + "published with the release before anything is replaced.</span>";
+    bar.hidden = false;
+  } catch (e) { /* offline, or the check has not finished; nothing to say */ }
+})();
 </script>
 "##;

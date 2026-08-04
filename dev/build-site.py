@@ -2884,7 +2884,7 @@ footer a{color:var(--dim)}
         <button class="chip dlopt win" data-kind="exe">EXE &#183; Windows</button>
       </div>
 
-      <div class="firstrun">
+      <div class="firstrun" id="firstrun-mac">
         <div class="firstrun-n">1</div>
         <div>
           <h3>Drag it to Applications</h3>
@@ -2902,6 +2902,30 @@ footer a{color:var(--dim)}
             remember them.</p>
         </div>
       </div>
+      <div class="firstrun" id="firstrun-win" hidden>
+        <div class="firstrun-n">1</div>
+        <div>
+          <h3>Put the .exe wherever you like</h3>
+          <p>There is no installer and nothing to set up &#8212; it is one file. It
+            writes only beside itself and never touches your game.</p>
+        </div>
+        <div class="firstrun-n">2</div>
+        <div>
+          <h3>If Windows says <b>&#8220;Windows protected your PC&#8221;</b></h3>
+          <p>Click <b>More info</b>, then <b>Run anyway</b>. Just this once.</p>
+          <p class="firstrun-why">SmartScreen shows that for any program it has not seen
+            downloaded many times before, which a new independent release never has. It
+            is not a virus warning. The checksum of every file is published beside it on
+            the releases page if you want to verify the download yourself.</p>
+        </div>
+        <div class="firstrun-n">3</div>
+        <div>
+          <h3>It opens in your browser</h3>
+          <p>The window that appears is the app. Leave it running while you play; it
+            reads the log the game already writes and updates itself as you go.</p>
+        </div>
+      </div>
+
       <details class="firstrun-alt">
         <summary>Prefer a terminal? One command does the same thing.</summary>
         <div class="demo"><div class="in" style="font-family:var(--mono);font-size:12.5px;line-height:2.1">
@@ -4144,9 +4168,16 @@ document.querySelectorAll(".dlopt").forEach(b=>{
   const hay = (plat + " " + ua).toLowerCase();
   // iPadOS reports itself as a Mac; the touch-point count is what separates them.
   const iPad = /macintel/i.test(plat) && navigator.maxTouchPoints > 1;
-  const mac = !iPad && (/mac/.test(hay)) && !/iphone|ipad|ipod/.test(hay);
+  // Platform first, user-agent only as a fallback. The two can disagree -- a spoofed or
+  // proxied UA, a browser freezing navigator.platform -- and when they did, "mac"
+  // matched first and a Windows visitor was offered a dmg. Deciding from the platform
+  // string when there is one, and making the two mutually exclusive, removes the tie.
+  const platWin = /win/.test(plat.toLowerCase());
+  const platMac = /mac/.test(plat.toLowerCase());
+  const win = (platWin || (!platMac && /windows/.test(ua.toLowerCase())))
+    && !/darwin/.test(hay);
+  const mac = !win && !iPad && /mac/.test(hay) && !/iphone|ipad|ipod/.test(hay);
   const ios = iPad || /iphone|ipad|ipod/.test(hay);
-  const win = /win/.test(hay) && !/darwin/.test(hay);
   const android = /android/.test(hay);
   const linux = !android && /linux|x11|cros/.test(hay);
 
@@ -4163,8 +4194,17 @@ document.querySelectorAll(".dlopt").forEach(b=>{
       c.classList.toggle("current", c.dataset.kind === kind));
   };
   const set = (cls, html)=>{ box.className = "detect " + cls; text.innerHTML = html; };
+  // Show the steps for the platform they are actually on. Both sets exist in the page
+  // so neither is hidden behind a click, but only the relevant one is in the way.
+  const steps = (which)=>{
+    const m = $("firstrun-mac"), w = $("firstrun-win"), alt = document.querySelector(".firstrun-alt");
+    if(m) m.hidden = which !== "mac";
+    if(w) w.hidden = which !== "win";
+    if(alt) alt.hidden = which !== "mac";   // the xattr fallback is a Mac thing
+  };
 
   if(mac){
+    steps("mac");
     set("ok", "You are on a <b>Mac</b> &#8212; this runs natively on Apple&nbsp;Silicon "
       + "and on Intel.");
     aim("dmg", "Download for macOS",
@@ -4173,6 +4213,7 @@ document.querySelectorAll(".dlopt").forEach(b=>{
     return;
   }
   if(win){
+    steps("win");
     set("ok", "You are on <b>Windows</b>.");
     aim("exe", "Download for Windows",
       "A single executable &#8212; no installer, nothing to unpack. Runs the same log "
@@ -4182,6 +4223,7 @@ document.querySelectorAll(".dlopt").forEach(b=>{
   }
   // Not a platform it runs on. Still give the button a sensible target, because the
   // commonest reason to be here on Linux or a phone is fetching it for another machine.
+  steps("mac");
   aim("dmg", "Download for macOS",
     "You are not on a machine this runs on, so nothing is pre-selected for you "
     + "&#8212; pick the build for wherever you are installing it.");

@@ -95,6 +95,26 @@ fn main() {
     // A past update leaves the previous build next to us; nothing can delete a running
     // exe, so it is cleared on the next start instead.
     update::clean_up_after_update();
+    // Set by the background check below; read by the state endpoint so the page can
+    // offer the update rather than the user having to know a command-line flag exists.
+    let update_available: std::sync::Arc<std::sync::Mutex<Option<String>>> =
+        std::sync::Arc::new(std::sync::Mutex::new(None));
+
+    // Check for a newer release in the background, once, on every start.
+    //
+    // It used to check only when run with --update, which nobody would ever discover --
+    // so in practice the Windows build never updated at all while the Mac one did it by
+    // itself. The check is a background thread because it shells out to curl and the
+    // readout must not wait on the network; the result is shown in the UI with a button,
+    // and nothing is ever installed without being asked for.
+    {
+        let found = std::sync::Arc::clone(&update_available);
+        std::thread::spawn(move || {
+            if let Some(u) = update::check(env!("CARGO_PKG_VERSION")) {
+                *found.lock().unwrap() = Some(u.tag.clone());
+            }
+        });
+    }
 
     if std::env::args().any(|a| a == "--update") {
         match update::check(env!("CARGO_PKG_VERSION")) {
@@ -136,6 +156,7 @@ fn main() {
         Arc::clone(&data),
         Arc::clone(&running),
         Arc::clone(&catalogue),
+        Arc::clone(&update_available),
     );
     let url = format!("http://127.0.0.1:{port}/");
     println!("Isaac Companion  ->  {url}");

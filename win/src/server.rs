@@ -16,11 +16,14 @@ use std::sync::{Arc, Mutex};
 
 /// Binds the first free port, preferring the one the macOS build's dev server uses so
 /// the URL is familiar, and returns it.
+pub type UpdateFlag = Arc<Mutex<Option<String>>>;
+
 pub fn serve(
     state: Arc<Mutex<State>>,
     data: Arc<Data>,
     running: Arc<AtomicBool>,
     catalogue: Arc<crate::browse::Catalogue>,
+    update: UpdateFlag,
 ) -> u16 {
     // ISAAC_PORT pins the port. Only the test harness sets it: everything else wants
     // the "first one that is free" behaviour below, because two copies of this on one
@@ -58,10 +61,11 @@ pub fn serve(
             let running = Arc::clone(&running);
             let cache = Arc::clone(&cache);
             let catalogue = Arc::clone(&catalogue);
+                let update = Arc::clone(&update);
             // A thread per connection. The only client is one browser tab polling a
             // few times a second, so a pool would be machinery for no one.
             std::thread::spawn(move || {
-                let _ = handle(stream, state, data, running, cache, catalogue);
+                let _ = handle(stream, state, data, running, cache, catalogue, update);
             });
         }
     });
@@ -77,6 +81,7 @@ fn handle(
     running: Arc<AtomicBool>,
     cache: Cache,
     catalogue: Arc<crate::browse::Catalogue>,
+    update: UpdateFlag,
 ) -> std::io::Result<()> {
     let mut reader = BufReader::new(stream.try_clone()?);
     let mut request = String::new();
@@ -148,6 +153,17 @@ fn handle(
             "200 OK",
             "application/json; charset=utf-8",
             cached_state(&state, &data, &running, &cache),
+        ),
+        // What version is available, if the background check found one. The page polls
+        // this so the update is offered in the UI rather than hidden behind a
+        // command-line flag nobody would find.
+        "/api/update" => (
+            "200 OK",
+            "application/json; charset=utf-8",
+            match update.lock().unwrap().clone() {
+                Some(t) => format!(r#"{{"available":"{}"}}"#, esc(&t)),
+                None => r#"{"available":null}"#.to_string(),
+            },
         ),
         "/api/items" => ("200 OK", "application/json; charset=utf-8", items_json(&catalogue, &q)),
         "/api/enemies" => (
@@ -412,7 +428,7 @@ mod tests {
         let catalogue = Arc::new(crate::browse::Catalogue::load());
         // Port 0: let the OS pick, so parallel tests cannot collide.
         std::env::set_var("ISAAC_PORT", "0");
-        let port = serve(state, data, running, catalogue);
+        let port = serve(state, data, running, catalogue, Arc::new(Mutex::new(None)));
         std::env::remove_var("ISAAC_PORT");
         port
     }
@@ -473,6 +489,45 @@ mod tests {
     /// The listener binds 127.0.0.1, but DNS rebinding walks straight past that: a
     /// hostile page whose domain resolves to 127.0.0.1 reads this server same-origin.
     /// The Host header is the only thing that distinguishes such a request.
+    /// The Windows build used to update only when run with --update, which nobody would
+    /// discover -- so in practice it never updated at all while the Mac one did it by
+    /// itself. The page asks this endpoint on load and offers what it finds.
+    #[test]
+    fn the_update_endpoint_reports_what_the_check_found() {
+        let state = Arc::new(Mutex::new(State {
+            run: crate::run::Run::default(),
+            log_path: None,
+            attached: false,
+            version: 0,
+        }));
+        let data = Arc::new(crate::run::Data::load());
+        let running = Arc::new(AtomicBool::new(false));
+        let catalogue = Arc::new(crate::browse::Catalogue::load());
+        let flag: UpdateFlag = Arc::new(Mutex::new(Some("v9.9.9".into())));
+        let port = serve(state, data, running, catalogue, flag);
+        let (status, body) = get(port, "/api/update");
+        assert!(status.contains("200"), "{status}");
+        assert!(body.contains("v9.9.9"), "{body}");
+    }
+
+    /// Nothing found means nothing offered -- the banner must stay hidden rather than
+    /// announce an update that does not exist.
+    #[test]
+    fn no_update_reports_null() {
+        let state = Arc::new(Mutex::new(State {
+            run: crate::run::Run::default(),
+            log_path: None,
+            attached: false,
+            version: 0,
+        }));
+        let data = Arc::new(crate::run::Data::load());
+        let running = Arc::new(AtomicBool::new(false));
+        let catalogue = Arc::new(crate::browse::Catalogue::load());
+        let port = serve(state, data, running, catalogue, Arc::new(Mutex::new(None)));
+        let (_, body) = get(port, "/api/update");
+        assert!(body.contains("null"), "{body}");
+    }
+
     #[test]
     fn a_rebound_host_is_refused() {
         let port = spin_up();
