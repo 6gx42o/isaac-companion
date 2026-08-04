@@ -166,6 +166,13 @@ public final class AppModel {
         directory: DataPaths.root.appending(path: "history", directoryHint: .isDirectory))
     public private(set) var history: [RunSummary] = []
     private var runStartedAt: Date?
+    /// Set when the replay recognises a run the previous process was already archiving.
+    /// The stored id is adopted VERBATIM: recomputing it from the adopted start time is
+    /// not stable, because Dates round-trip through the archive at whole-second
+    /// precision while ids encode milliseconds -- adopting 17:32:56.903 produced id
+    /// "-000" beside the stored "-903", and the duplicate this mechanism exists to
+    /// prevent came back through the gap.
+    private var adoptedArchiveID: String?
     /// The tailer replays the whole log on attach, in one batch. Those runs are already
     /// over and we have no idea when they were played, so they are not archived.
     private var didInitialReplay = false
@@ -208,7 +215,7 @@ public final class AppModel {
             // in the same second would otherwise be the same file, and the second would
             // silently replace the first. Unreachable while actually playing, and
             // trivially reachable from a replayed log.
-            id: RunSummary.id(for: started),
+            id: adoptedArchiveID ?? RunSummary.id(for: started),
             startedAt: started,
             endedAt: inProgress ? nil : Date(),
             seed: run.seed,
@@ -520,6 +527,7 @@ public final class AppModel {
                 run = RunState()
                 reducer = RunReducer()
                 runStartedAt = Date()
+                adoptedArchiveID = nil
                 // The game reshuffles which colour carries which effect, so carrying the
                 // mapping across would be worse than having none.
                 pills.reset()
@@ -537,6 +545,7 @@ public final class AppModel {
             if case .runStarted(let seed) = event, seed != run.seed {
                 archiveCurrentRun()
                 runStartedAt = Date()
+                adoptedArchiveID = nil
                 pills.reset()          // new run, new shuffle
                 pillsAwaitingID.removeAll()
                 unidentifiedPocketUses = 0
@@ -579,6 +588,7 @@ public final class AppModel {
                 if let previous = history.first(where: { $0.seed == run.seed }),
                    Date().timeIntervalSince(previous.startedAt) < 12 * 3600 {
                     runStartedAt = previous.startedAt
+                    adoptedArchiveID = previous.id
                 } else {
                     // Its start is genuinely unknown, so the best honest answer is
                     // "when we started watching".
