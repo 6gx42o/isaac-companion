@@ -143,7 +143,9 @@ public struct SpriteColourReader: Sendable {
     /// Nearest-neighbour: these are pixel-art sprites a few pixels across, and smoothing
     /// them blends the two halves of a two-tone pill into one average that no longer
     /// distinguishes it from its neighbours on the strip.
-    public static func rgba(_ image: CGImage, side: Int) -> ([SIMD3<Float>], [Float])? {
+    public static func rgba(
+        _ image: CGImage, side: Int, smooth: Bool = false
+    ) -> ([SIMD3<Float>], [Float])? {
         let count = side * side
         var buffer = [UInt8](repeating: 0, count: count * 4)
         guard let ctx = CGContext(
@@ -151,7 +153,16 @@ public struct SpriteColourReader: Sendable {
             bytesPerRow: side * 4, space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
-        ctx.interpolationQuality = .none
+        // Nearest for TEMPLATES: they come from the atlas at native resolution, where
+        // averaging would blur one pixel-art cell into its neighbours.
+        //
+        // Averaged for CANDIDATES: a sprite on screen is magnified about 3x, so reducing
+        // it back to the template's size is a downsample, and nearest-neighbour there
+        // keeps one source pixel in nine and aliases the result differently every time
+        // the window shifts. Measured: with nearest, the correct card peaked at 0.61 and
+        // lost to three others in the same 0.55-0.65 band -- the sprites were not being
+        // compared so much as their aliasing was.
+        ctx.interpolationQuality = smooth ? .high : .none
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
 
         var rgb = [SIMD3<Float>](repeating: .zero, count: count)
@@ -261,7 +272,7 @@ public struct SpriteColourReader: Sendable {
             for x in Swift.stride(from: 0, through: haystack.width - window, by: stride) {
                 let rect = CGRect(x: x, y: y, width: window, height: window)
                 guard let crop = haystack.cropping(to: rect),
-                      let (rgb, _) = Self.rgba(crop, side: side),
+                      let (rgb, _) = Self.rgba(crop, side: side, smooth: true),
                       Self.variance(of: rgb) >= Self.candidateVarianceFloor,
                       let top = scores(candidate: rgb).first
                 else { continue }

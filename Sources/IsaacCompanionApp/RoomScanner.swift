@@ -279,10 +279,25 @@ final class RoomScanner {
         // The game letterboxes a 480x270 field into the window, so on-screen sprite size
         // follows the same scale the room geometry already uses.
         let scale = min(CGFloat(shot.width) / 480, CGFloat(shot.height) / 270)
-        let cornerW = min(shot.width, Int(120 * scale))
-        let cornerH = min(shot.height, Int(90 * scale))
+        // BOTTOM-RIGHT, and tight. Both facts were measured off a real frame, after an
+        // entire play session of empty reads:
+        //
+        //  - The corner. Afterbirth+ draws the pocket item at the bottom RIGHT. The
+        //    bottom left this used to crop is room floor, so the reader was looking at
+        //    the wrong place and correctly finding nothing there.
+        //  - The size. The card occupies roughly 13x19 game pixels, 7-25 in from the
+        //    bottom edge and 10-23 in from the right. Searching a 120x90 region for it
+        //    is searching mostly dark room floor, and dark textured floor scores well
+        //    against an almost-black card -- the search found A Card Against Humanity
+        //    in the wood planks rather than the Justice card actually held. A tight box
+        //    removes the haystack instead of trying to out-score it.
+        // 46 game px: enough to hold the 32-px template footprint plus room to slide.
+        let cornerW = min(shot.width, Int(46 * scale))
+        let cornerH = min(shot.height, Int(46 * scale))
         guard let corner = shot.cropping(
-            to: CGRect(x: 0, y: shot.height - cornerH, width: cornerW, height: cornerH))
+            to: CGRect(
+                x: shot.width - cornerW, y: shot.height - cornerH,
+                width: cornerW, height: cornerH))
         else { return nil }
         if debug { Self.dump(corner, name: "pocket-slot") }
 
@@ -291,7 +306,10 @@ final class RoomScanner {
 
         // Cards are drawn larger than pills in the slot.
         if let reader = cardReader,
-           let hit = reader.best(in: corner, window: max(14, Int((20 * scale).rounded())), stride: 2),
+           // 32 game px, because that is the template's own cell size -- the art fills
+           // only 14x18 of it, and a window sized to the visible art would compare the
+           // sprite against a resampling of itself at the wrong scale.
+           let hit = reader.best(in: corner, window: max(16, Int((32 * scale).rounded())), stride: 2),
            hit.match.score > bestScore {
             bestScore = hit.match.score
             // Re-read the winning window to collect anything indistinguishable from it.
@@ -304,7 +322,7 @@ final class RoomScanner {
             best = .card(ids: ids, confidence: hit.match.score)
         }
         if let reader = pillReader,
-           let hit = reader.best(in: corner, window: max(12, Int((16 * scale).rounded())), stride: 2),
+           let hit = reader.best(in: corner, window: max(12, Int((32 * scale).rounded())), stride: 2),
            hit.match.score > bestScore {
             bestScore = hit.match.score
             best = .pill(colour: hit.match.index, confidence: hit.match.score)

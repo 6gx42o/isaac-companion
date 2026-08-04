@@ -235,3 +235,38 @@ struct LiveCaptureTests {
         }
     }
 }
+
+private let pocketCardCapture = liveFixture("pocket-justice-card.png")
+
+@Suite("Live pocket slot", .enabled(if: pocketCardCapture != nil && atlas != nil,
+                                    "no live fixtures on this machine"))
+struct LivePocketTests {
+    /// A real bottom-right pocket crop holding VIII - Justice (card 9).
+    ///
+    /// The reader does NOT identify it yet, and this test pins the property that matters
+    /// while it does not: it must never name a DIFFERENT card. Measured, every candidate
+    /// window here scores in a 0.55-0.65 band with card 9 peaking at 0.61 and losing to
+    /// three others -- so the 0.72 floor correctly yields nothing rather than a wrong
+    /// answer, and the UI asks the player instead of misinforming them.
+    ///
+    /// What is left is geometry, not matching. The template's art fills 14x18 of a 32x32
+    /// atlas cell while the HUD draws the card at its own scale and aspect, so a square
+    /// window over the screen sprite does not put the art where the template's mask
+    /// expects it. Fixing it properly means reading the HUD's own layout out of the
+    /// game's files, the way the room grid already is -- not fitting constants to one
+    /// screenshot.
+    @Test("an unidentifiable pocket card is never named as the wrong card")
+    func neverNamesTheWrongCard() throws {
+        let sprites = cardSprites()
+        let reader = try #require(
+            SpriteColourReader(side: SpriteColourReader.cardSide, sprites: sprites))
+        let capture = try #require(pocketCardCapture)
+        for window in [80, 101, 120] where capture.width >= window {
+            if let hit = reader.best(in: capture, window: window, stride: 4) {
+                #expect(
+                    hit.match.index == 9,
+                    "named card \(hit.match.index) for a slot holding card 9")
+            }
+        }
+    }
+}
