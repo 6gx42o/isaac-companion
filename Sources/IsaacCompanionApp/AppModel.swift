@@ -520,9 +520,7 @@ public final class AppModel {
                 pills.reset()
                 pillsAwaitingID.removeAll()
                 unidentifiedPocketUses = 0
-                heldPill = nil
-                heldCard = nil
-                heldCardAlternatives = []
+                clearPocket()
                 continue
             }
             guard let event = parser.parse(line: line) else { continue }
@@ -537,9 +535,7 @@ public final class AppModel {
                 pills.reset()          // new run, new shuffle
                 pillsAwaitingID.removeAll()
                 unidentifiedPocketUses = 0
-                heldPill = nil
-                heldCard = nil
-                heldCardAlternatives = []
+                clearPocket()
             }
             // A pill hit the floor. The player has to walk over and pick it up, so look
             // at the pocket slot a moment later rather than now.
@@ -1112,20 +1108,24 @@ public final class AppModel {
                 heldPill = nil
             case .pill(let colour, _):
                 pills.note(colour: colour)
+                clearPocket()
                 heldPill = colour
-                heldCard = nil
-                heldCardAlternatives = []
-                heldCardConfidence = 0
             case nil:
-                heldPill = nil
-                heldCard = nil
-                heldCardAlternatives = []
-                heldCardConfidence = 0
+                clearPocket()
             }
             return (found, nil)
         } catch {
             return (nil, error.localizedDescription)
         }
+    }
+
+    /// Empties the held-pocket state, everywhere at once. Five call sites were each
+    /// clearing their own subset of these four fields and had already drifted apart.
+    private func clearPocket() {
+        heldPill = nil
+        heldCard = nil
+        heldCardAlternatives = []
+        heldCardConfidence = 0
     }
 
     /// Attributes a swallowed pill to whatever colour was last seen in the pocket slot.
@@ -1150,9 +1150,7 @@ public final class AppModel {
             } else {
                 unidentifiedPocketUses += 1
             }
-            heldCard = nil
-            heldCardAlternatives = []
-            heldCardConfidence = 0
+            clearPocket()
             schedulePocketRead(after: 1.5)
             return
         }

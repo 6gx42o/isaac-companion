@@ -26,15 +26,6 @@ final class RoomScanner {
         var position: CGPoint       // room coordinates, from the log
     }
 
-    /// A pill seen on screen. `colour` indexes the harvested strip; which effect that
-    /// colour carries is not knowable from the image -- the game reshuffles it per run.
-    struct PillSighting: Equatable {
-        var colour: Int
-        var confidence: Double
-        /// True for the pocket slot, false for one lying on the floor.
-        var held: Bool
-    }
-
     /// What is in the pocket slot.
     ///
     /// A card is a complete answer the moment it is seen -- its face IS its identity and
@@ -69,7 +60,6 @@ final class RoomScanner {
     static var roomSize: CGSize { RoomGeometry.size }
 
     private var matcher = SpriteMatcher(side: 32, templates: [])
-    private var templateSide = 32
 
     /// Builds normalised templates once, from the same atlas the UI draws.
     private var pillReader: SpriteColourReader?
@@ -83,7 +73,6 @@ final class RoomScanner {
             let atlasCG = atlas.cgImage(forProposedRect: nil, context: nil, hints: nil)
         else { throw ScanError.noAtlas }
 
-        templateSide = index.cell
         let byGfx = Dictionary(
             items.filter { $0.kind != .trinket && !$0.gfx.isEmpty }
                 .map { ($0.gfx.lowercased(), $0.id) },
@@ -228,56 +217,6 @@ final class RoomScanner {
                     + "capture \(shot.width)x\(shot.height)")
         }
         return shot
-    }
-
-    /// Reads the pill colours visible on screen -- the one in the pocket slot, and any
-    /// lying on the floor of the room.
-    ///
-    /// Returns colours, not effects. Which effect a colour carries is reshuffled every
-    /// run and written down nowhere the app can reach, so the colour is genuinely the
-    /// whole answer available from the screen; the effect is learned once per run and
-    /// then applies to every pill of that colour for the rest of it.
-    ///
-    /// The search slides a window rather than cropping a fixed rectangle: the pocket slot
-    /// moves with the window size and the HUD's own scaling, and a hardcoded rectangle is
-    /// one display change away from reading empty floor.
-    func readPills(pillStrip: CGImage) async throws -> [PillSighting] {
-        if pillReader == nil { pillReader = SpriteColourReader(strip: pillStrip) }
-        guard let reader = pillReader else { throw ScanError.noAtlas }
-
-        let shot = try await captureGameWindow()
-        let debug = ProcessInfo.processInfo.environment["ISAAC_SCAN_DEBUG"] == "1"
-        if debug { Self.dump(shot, name: "pill-full") }
-
-        // A pill is drawn about 16 game-pixels across, and the game letterboxes a 480x270
-        // field into the window, so the on-screen size follows the same scale the room
-        // geometry already uses.
-        let scale = min(CGFloat(shot.width) / 480, CGFloat(shot.height) / 270)
-        let window = max(12, Int((16 * scale).rounded()))
-
-        var found: [PillSighting] = []
-
-        // The pocket slot: bottom-left of the HUD. Searched as a generous corner region
-        // rather than a point, for the reasons above.
-        let cornerW = min(shot.width, Int(120 * scale))
-        let cornerH = min(shot.height, Int(90 * scale))
-        let corner = CGRect(
-            x: 0, y: shot.height - cornerH, width: cornerW, height: cornerH)
-        if let crop = shot.cropping(to: corner) {
-            if debug { Self.dump(crop, name: "pill-pocket") }
-            if let hit = reader.best(in: crop, window: window, stride: 2) {
-                found.append(
-                    PillSighting(
-                        colour: hit.match.index, confidence: hit.match.score, held: true))
-                if debug {
-                    log("pocket pill colour \(hit.match.index) "
-                            + String(format: "%.3f", hit.match.score))
-                }
-            } else if debug {
-                log("no pill in the pocket slot")
-            }
-        }
-        return found
     }
 
     /// Builds one colour template per card face, from the same atlas the UI draws.

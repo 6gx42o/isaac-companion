@@ -81,10 +81,35 @@ fn handle(
     let mut reader = BufReader::new(stream.try_clone()?);
     let mut request = String::new();
     reader.read_line(&mut request)?;
-    // Drain the headers so the client does not see a reset before it finishes writing.
+    // Drain the headers so the client does not see a reset before it finishes writing --
+    // and keep Host on the way through, because it is the one header that matters here.
+    let mut host = String::new();
     let mut line = String::new();
     while reader.read_line(&mut line)? > 0 && line.trim() != "" {
+        if let Some(v) = line
+            .split_once(':')
+            .filter(|(k, _)| k.eq_ignore_ascii_case("host"))
+            .map(|(_, v)| v.trim())
+        {
+            host = v.to_ascii_lowercase();
+        }
         line.clear();
+    }
+
+    // The listener binds 127.0.0.1, but that alone does not stop DNS rebinding: a web
+    // page can point its own domain's A record at 127.0.0.1 and then read this server
+    // same-origin from any browser tab. The Host header is the tell -- a rebound request
+    // arrives with the attacker's domain in it -- so anything that is not a local name
+    // is refused before any handler runs.
+    let host_name = host.rsplit_once(':').map_or(host.as_str(), |(name, port)| {
+        // Split off a port only when what follows the colon is numeric, so an IPv6
+        // literal like [::1] is not mangled.
+        if port.chars().all(|c| c.is_ascii_digit()) { name } else { host.as_str() }
+    });
+    if !matches!(host_name, "127.0.0.1" | "localhost" | "[::1]" | "") {
+        let head = "HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        stream.write_all(head.as_bytes())?;
+        return stream.flush();
     }
 
     let target = request.split_whitespace().nth(1).unwrap_or("/").to_string();
@@ -443,6 +468,29 @@ mod tests {
         // Traversal is refused at the HTTP layer as well as in browse.rs.
         let (status, _) = get(port, "/sprite/../../etc/passwd");
         assert!(status.contains("404"), "{status}");
+    }
+
+    /// The listener binds 127.0.0.1, but DNS rebinding walks straight past that: a
+    /// hostile page whose domain resolves to 127.0.0.1 reads this server same-origin.
+    /// The Host header is the only thing that distinguishes such a request.
+    #[test]
+    fn a_rebound_host_is_refused() {
+        let port = spin_up();
+        let mut stream =
+            TestStream::connect(("127.0.0.1", port)).expect("connect");
+        write!(stream, "GET /api/state HTTP/1.1\r\nHost: evil.example\r\n\r\n").unwrap();
+        let mut line = String::new();
+        TestReader::new(&stream).read_line(&mut line).unwrap();
+        assert!(line.contains("403"), "rebound Host answered: {line}");
+
+        // And the names a real local browser sends still work, with or without a port.
+        for host in ["127.0.0.1:8731", "localhost", "[::1]:9000"] {
+            let mut s2 = TestStream::connect(("127.0.0.1", port)).expect("connect");
+            write!(s2, "GET / HTTP/1.1\r\nHost: {host}\r\n\r\n").unwrap();
+            let mut l2 = String::new();
+            TestReader::new(&s2).read_line(&mut l2).unwrap();
+            assert!(l2.contains("200"), "local Host {host} refused: {l2}");
+        }
     }
 
     #[test]

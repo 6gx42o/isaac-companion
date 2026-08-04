@@ -72,6 +72,17 @@ struct WebView: NSViewRepresentable {
             webView?.evaluateJavaScript("window.onHistory(\(model.historyJSON()))")
         }
 
+        /// A Swift string as a JavaScript string literal, via the JSON encoder rather
+        /// than by hand. The hand-rolled version replaced double quotes with single
+        /// quotes and nothing else, so a backslash or newline in an error message --
+        /// which system error descriptions are entirely capable of containing -- would
+        /// corrupt the injected script and the push would silently do nothing.
+        static func jsString(_ value: String) -> String {
+            (try? JSONEncoder().encode([value]))
+                .flatMap { String(data: $0, encoding: .utf8) }
+                .map { String($0.dropFirst().dropLast()) } ?? "\"\""
+        }
+
         private var lastUpdateJSON = ""
 
         func pushUpdate() {
@@ -268,8 +279,7 @@ struct WebView: NSViewRepresentable {
                     case nil:
                         what = "null"
                     }
-                    let err = result.error.map { "\"\($0.replacingOccurrences(of: "\"", with: "'"))\"" }
-                        ?? "null"
+                    let err = result.error.map(Self.jsString) ?? "null"
                     self.webView?.evaluateJavaScript(
                         "window.onPocketScan({\"found\":\(what),\"error\":\(err)})",
                         completionHandler: nil)
@@ -293,8 +303,7 @@ struct WebView: NSViewRepresentable {
                 let err = model.recordMeasuredBase(
                     damage: n("damage"), tearDelay: n("delay"), range: n("range"),
                     shotSpeed: n("shotSpeed"), speed: n("speed"), luck: n("luck"))
-                let msg = err.map { "\"\($0.replacingOccurrences(of: "\"", with: "'"))\"" }
-                    ?? "null"
+                let msg = err.map(Self.jsString) ?? "null"
                 webView?.evaluateJavaScript(
                     "window.onMeasured(\(msg))", completionHandler: nil)
                 push(model.stateJSON(), force: true)

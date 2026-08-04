@@ -31,10 +31,6 @@ public struct SpriteColourReader: Sendable {
         public let index: Int
         /// 1 is a perfect colour match, 0 is the worst possible. See `confidenceFloor`.
         public let score: Double
-        public init(index: Int, score: Double) {
-            self.index = index
-            self.score = score
-        }
     }
 
     /// Below this, say nothing. An empty pocket slot and a dark room both produce a
@@ -158,14 +154,6 @@ public struct SpriteColourReader: Sendable {
         guard let top = all.first else { return ([], nil) }
         let tied = all.prefix { top.score - $0.score <= tieWithin }
         return (Array(tied), all.dropFirst(tied.count).first)
-    }
-
-    /// Reads a tight crop -- one pill, filling the frame.
-    public func match(_ crop: CGImage) -> Match? {
-        guard let (rgb, _) = Self.rgba(crop, side: side) else { return nil }
-        guard let best = scores(candidate: rgb).first,
-              best.score >= Self.confidenceFloor else { return nil }
-        return best
     }
 
     /// Finds the best pill anywhere in a larger image, by sliding a square window.
