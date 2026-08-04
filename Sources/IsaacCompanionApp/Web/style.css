@@ -3383,3 +3383,6 @@ kbd {
 
 /* A used pocket item: its effect is already in your numbers. */
 .pill.used { border-color: var(--good); color: var(--good); }
+
+/* Something that works but has never been proven against the real thing. */
+.pill.beta { border-color: var(--warn); color: var(--warn); margin-left: 6px; }

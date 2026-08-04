@@ -46,9 +46,17 @@ or build it yourself — see [Building](#building).
 | **macOS** | `.dmg`, `.pkg` or `.zip` — one universal binary, Apple Silicon *and* Intel. macOS 14+. |
 | **Windows** | a single `.exe`, no installer and no runtime. |
 
-The macOS build is signed with a self-signed certificate rather than a Developer ID,
-so macOS Gatekeeper will refuse it on first launch. Clear the quarantine flag
-once after installing:
+### Opening it the first time
+
+The macOS build is signed with a self-signed certificate rather than a paid Apple
+Developer ID, so macOS asks you to confirm the first launch:
+
+> **Right-click the app in Applications and choose Open**, then click **Open** again.
+
+Once. Every launch after that is a normal double-click. The same dialog appears for
+any small independent app that has not paid Apple's yearly fee.
+
+If you would rather do it from a terminal, this is the equivalent:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/IsaacCompanion.app

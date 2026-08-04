@@ -1348,11 +1348,32 @@ window.onState = (state) => {
   const warn = $("char-warning");
   // The warning is about the character's numbers; with no run there are none.
   if (liveRun && state.characterUnverified && state.characterUnverified.length) {
-    warn.textContent =
-      "Unverified base stats for this character (" +
-      state.characterUnverified.join(", ") +
-      "). Numbers below may be off until they're checked against the in-game HUD." +
-      (state.characterNotes ? " " + state.characterNotes : "");
+    // Say who is uncertain and offer the cure in the same breath. A warning that only
+    // warns invites the reading "this app is wrong"; the honest reading is "nobody has
+    // checked this character yet, and you can settle it in thirty seconds".
+    warn.textContent = "";
+    const what = state.characterUnverified.join(", ");
+    warn.appendChild(el("b", null, (state.character || "This character") + ": "));
+    warn.appendChild(
+      el("span", null,
+        what + " came from research, not from your game, so " +
+        (state.characterUnverified.length === 1 ? "it may be off." : "they may be off.")));
+    if (state.canMeasureBase) {
+      // Before any item, the HUD IS the baseline -- so the fix is available right now.
+      warn.appendChild(
+        el("span", null,
+          " You have no items yet, so the game's HUD is showing this character's base "
+          + "stats: turn on the comparison table below, type the six numbers, and save "
+          + "them. That settles this character permanently."));
+    } else {
+      warn.appendChild(
+        el("span", null,
+          " To settle it, start a run as " + (state.character || "them")
+          + " and save the HUD's numbers before picking anything up."));
+    }
+    if (state.characterNotes) {
+      warn.appendChild(el("span", "muted", " " + state.characterNotes));
+    }
     warn.classList.remove("hidden");
   } else {
     warn.classList.add("hidden");

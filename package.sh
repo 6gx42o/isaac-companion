@@ -66,6 +66,31 @@ ditto -c -k --sequesterRsrc --keepParent "$APP" "$BASE.zip"
 STAGE="$(mktemp -d)"
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
+# The app is signed with a self-signed certificate rather than a Developer ID, so
+# Gatekeeper refuses a plain double-click and says the developer cannot be verified.
+# Right-click > Open clears it in two clicks and needs no Terminal -- but only if the
+# user is told, at the moment they are looking at the window, rather than on a web page
+# they have already left. Verified against the published dmg: without this, the first
+# thing a stranger sees is a refusal with no way forward.
+cat > "$STAGE/READ ME FIRST.txt" <<'TXT'
+Opening Isaac Companion the first time
+======================================
+
+Drag IsaacCompanion.app to Applications, then:
+
+    RIGHT-CLICK the app in Applications and choose "Open",
+    then click "Open" again in the dialog.
+
+Just this once. Every launch after that is a normal double-click.
+
+Why: the app is signed, but with a self-signed certificate rather than a paid
+Apple Developer ID, so macOS asks you to confirm the first launch. It is the
+same dialog you would get from any small independent app that has not paid
+Apple's yearly fee. Nothing about the app changes either way.
+
+Isaac Companion never modifies the game, and needs no mod -- so your Steam
+achievements keep working.
+TXT
 hdiutil create -quiet -fs HFS+ -srcfolder "$STAGE" \
   -volname "Isaac Companion" -format UDZO -ov "$BASE.dmg"
 rm -rf "$STAGE"

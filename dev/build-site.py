@@ -367,6 +367,23 @@ h2{font-family:var(--serif);font-size:clamp(24px,3.4vw,36px);margin:0 0 10px;let
 .chip.dlopt.current{border-color:var(--hot);color:var(--ash)}
 .chip.dlopt.current::after{content:" \2713";color:var(--hot)}
 
+/* First launch, as two numbered steps rather than a paragraph of apology. The step
+   people skip is the one that decides whether the app opens at all. */
+.firstrun{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px 16px;
+  align-items:start;margin:26px 0 0;padding:20px 22px;border:1px solid var(--rule2);
+  border-radius:3px;background:var(--panel)}
+.firstrun-n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--mark);color:var(--hot);font-family:var(--mono);font-size:12px}
+.firstrun h3{font-family:var(--serif);font-size:18px;margin:2px 0 4px;font-weight:400}
+.firstrun h3 b{color:var(--hot);font-weight:400}
+.firstrun p{margin:0;color:var(--dim);font-size:13.5px;line-height:1.55}
+.firstrun-why{margin-top:8px!important;color:var(--faint)!important;font-size:12.5px!important}
+.firstrun-alt{margin-top:14px}
+.firstrun-alt summary{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);cursor:pointer}
+.firstrun-alt summary:hover{color:var(--ash)}
+.firstrun-alt .demo{margin-top:12px}
+
 /* ---- item index ---- */
 .searchwrap{position:sticky;top:49px;z-index:40;padding:20px 0 12px;
   background:linear-gradient(var(--void) 72%,transparent)}
@@ -2867,14 +2884,31 @@ footer a{color:var(--dim)}
         <button class="chip dlopt win" data-kind="exe">EXE &#183; Windows</button>
       </div>
 
-      <p class="lead" style="margin-top:22px">A notarised release would just open. This one
-        is ad-hoc signed, so macOS quarantines it on download &#8212; one command clears
-        that, and it is shown here rather than hidden.</p>
-      <div class="demo"><div class="in" style="font-family:var(--mono);font-size:12.5px;line-height:2.1">
-        <div style="color:var(--faint)"># after installing, clear the quarantine flag</div>
-        <div>$ xattr -dr com.apple.quarantine /Applications/IsaacCompanion.app</div>
-        <div>$ open /Applications/IsaacCompanion.app</div>
-      </div></div>
+      <div class="firstrun">
+        <div class="firstrun-n">1</div>
+        <div>
+          <h3>Drag it to Applications</h3>
+          <p>The disk image opens with an Applications shortcut beside it.</p>
+        </div>
+        <div class="firstrun-n">2</div>
+        <div>
+          <h3><b>Right-click</b> the app and choose <b>Open</b></h3>
+          <p>Then click <b>Open</b> in the dialog. Just this once &#8212; every launch
+            after that is a normal double-click.</p>
+          <p class="firstrun-why">macOS asks because the app is signed with a
+            self-signed certificate rather than a paid Apple Developer ID. It is the
+            same dialog any small independent app gets. Nothing about the app differs
+            either way, and the disk image repeats these steps so you don't have to
+            remember them.</p>
+        </div>
+      </div>
+      <details class="firstrun-alt">
+        <summary>Prefer a terminal? One command does the same thing.</summary>
+        <div class="demo"><div class="in" style="font-family:var(--mono);font-size:12.5px;line-height:2.1">
+          <div>$ xattr -dr com.apple.quarantine /Applications/IsaacCompanion.app</div>
+          <div>$ open /Applications/IsaacCompanion.app</div>
+        </div></div>
+      </details>
 
       <div class="grid" style="margin-top:26px">
         <div class="card"><div class="n">On first launch</div><h3>It finds your game</h3>
