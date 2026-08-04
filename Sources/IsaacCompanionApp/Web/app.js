@@ -3205,14 +3205,21 @@ function renderPills() {
     if (art) line.appendChild(art);
     const body = el("div", "pillbody");
     const alts = pillData.card.alternatives || [];
-    // The game ships no art separating Blank Rune from Black Rune, so where the sprite
-    // cannot decide, say both rather than pick -- picking would state a coin flip.
-    const head = el("div", "pillname", alts.length > 1 ? alts.join(" or ") : pillData.card.name);
+    // Where the sprite cannot decide, say so rather than pick -- picking would state a
+    // coin flip as fact. Two shapes of that: Blank and Black Rune share one sprite, and
+    // ALL runes share the three generic stones the HUD draws.
+    const manyRunes = alts.length > 3;
+    const head = el("div", "pillname",
+      manyRunes ? "A rune" : (alts.length > 1 ? alts.join(" or ") : pillData.card.name));
     head.appendChild(el("span", "pill tag", "in your pocket"));
     body.appendChild(head);
-    body.appendChild(el("div", "muted small", alts.length > 1
-      ? "the game draws these two identically, so this can't tell them apart"
-      : "read off the screen \u00b7 " + Math.round(pillData.card.confidence * 100) + "% sure"));
+    body.appendChild(el("div", "muted small",
+      manyRunes
+        ? "the game draws every rune as the same stone, so which one isn't on screen — "
+          + "add it by hand if you want it counted"
+        : alts.length > 1
+          ? "the game draws these two identically, so this can't tell them apart"
+          : "read off the screen \u00b7 " + Math.round(pillData.card.confidence * 100) + "% sure"));
     line.appendChild(body);
     host.appendChild(line);
   }

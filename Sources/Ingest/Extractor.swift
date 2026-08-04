@@ -54,6 +54,10 @@ public struct Extractor: Sendable {
     /// cells, four per row: the boot, the eye, the range dashes, the tear-in-flight,
     /// the sword and the clover, then the angel and devil marks.
     public static var hudStats: URL { harvestDir.appending(path: "hudstats.png") }
+    /// The rune stones the HUD actually draws, as one strip. There are THREE of them for
+    /// every rune in the game -- ui_cardspills.anm2's Runes animation has three frames --
+    /// so a rune in the pocket slot can be recognised as a rune and never as which one.
+    public static var hudRunes: URL { harvestDir.appending(path: "runes_hud.png") }
 
     public static var isHarvested: Bool {
         FileManager.default.fileExists(atPath: itemPoolsXML.path)
@@ -108,6 +112,33 @@ public struct Extractor: Sendable {
             let src = resources.appending(path: name)
             guard fm.fileExists(atPath: src.path) else { continue }
             try? fm.copyItem(at: src, to: Self.harvestDir.appending(path: name))
+        }
+
+        // The rune stones as the HUD draws them, from ui_cardspills.png at the crops
+        // ui_cardspills.anm2 names. Deliberately NOT the giant-book plates the browser
+        // uses: those are the full-screen pickup illustrations, and matching the pocket
+        // slot against art the game never shows there invites a confident wrong answer.
+        let spills = resources.appending(path: "gfx/ui/ui_cardspills.png")
+        if let src = CGImageSourceCreateWithURL(spills as CFURL, nil),
+           let sheet = CGImageSourceCreateImageAtIndex(src, 0, nil) {
+            let frames = [(128, 64), (128, 96), (192, 64)]
+            let cell = 32
+            if let ctx = CGContext(
+                data: nil, width: cell * frames.count, height: cell, bitsPerComponent: 8,
+                bytesPerRow: cell * frames.count * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) {
+                ctx.interpolationQuality = .none
+                for (i, f) in frames.enumerated() {
+                    guard let crop = sheet.cropping(
+                        to: CGRect(x: f.0, y: f.1, width: cell, height: cell)) else { continue }
+                    ctx.draw(crop, in: CGRect(x: i * cell, y: 0, width: cell, height: cell))
+                }
+                if let out = ctx.makeImage(),
+                   let png = NSBitmapImageRep(cgImage: out)
+                       .representation(using: .png, properties: [:]) {
+                    try? png.write(to: Self.hudRunes)
+                }
+            }
         }
 
         // The stat HUD's own icons. Copied rather than redrawn so the app labels a stat

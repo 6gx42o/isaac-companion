@@ -66,7 +66,13 @@ final class RoomScanner {
 
     /// Builds normalised templates once, from the same atlas the UI draws.
     private var pillReader: SpriteColourReader?
+    /// Split by the shape the game DRAWS them at. Tarot cards are 14x18; rune stones
+    /// are square. One reader cannot serve both: a window is sized to the sprite's
+    /// aspect, and a square window over a tall card frames background either side.
     private var cardReader: SpriteColourReader?
+    private var runeReader: SpriteColourReader?
+    /// Every rune id, returned together when the HUD's generic stone is recognised.
+    private var runeIDs: [Int] = []
 
     func loadTemplates(items: [Item]) throws {
         guard let index = Pipeline.loadAtlasIndex(),
@@ -256,9 +262,33 @@ final class RoomScanner {
         }
         // Card faces are 14x18 in the harvest, drawn by the HUD from 16x24 frames --
         // never square. See SpriteColourReader.cardW/cardH.
+        // Only the card-shaped art. The square entries are the runes, and their
+        // browser art is the giant-book pickup illustration -- which is NOT what the
+        // HUD draws, so matching the pocket slot against it invites a confident wrong
+        // answer. Runes are handled separately, below.
+        let tall = sprites.filter {
+            let art = SpriteColourReader.trimmed($0.image)
+            return abs(Double(art.width) / Double(max(art.height, 1)) - 14.0 / 18.0) < 0.15
+        }
         cardReader = SpriteColourReader(
             width: SpriteColourReader.cardW, height: SpriteColourReader.cardH,
-            sprites: sprites)
+            sprites: tall)
+
+        // The rune stones the HUD actually draws: THREE sprites for every rune in the
+        // game (ui_cardspills.anm2's Runes animation has three frames). So a rune can
+        // be recognised as a rune and never as which one -- the information simply is
+        // not on the screen. Every rune id is returned together, and the existing
+        // ambiguity path shows them as a set and keeps them out of the run.
+        runeIDs = (items.filter { $0.kind == .card }.map(\.id).filter { $0 >= 32 && $0 <= 41 })
+            .sorted()
+        if let data = try? Data(
+            contentsOf: DataPaths.dataDir(.abplus).appending(path: "runes_hud.png")),
+           let strip = NSImage(data: data)?
+            .cgImage(forProposedRect: nil, context: nil, hints: nil) {
+            runeReader = SpriteColourReader(
+                strip: strip, side: SpriteColourReader.pillSide)
+        }
+        log("pocket templates: \(tall.count) cards, \(runeIDs.count) runes as one group")
     }
 
     /// Reads whatever is in the pocket slot -- a card or a pill.
@@ -273,7 +303,8 @@ final class RoomScanner {
                 strip: pillStrip, side: SpriteColourReader.pillSide)
         }
         loadCardTemplates(items: items)
-        guard pillReader != nil || cardReader != nil else { throw ScanError.noAtlas }
+        guard pillReader != nil || cardReader != nil || runeReader != nil
+        else { throw ScanError.noAtlas }
 
         let shot = try await captureGameWindow()
         let debug = ProcessInfo.processInfo.environment["ISAAC_SCAN_DEBUG"] == "1"
@@ -330,6 +361,17 @@ final class RoomScanner {
             }
             best = .card(ids: ids, confidence: hit.match.score)
         }
+        // A rune stone. Which rune is unknowable from the slot, so every rune id comes
+        // back together and the UI says so rather than picking one.
+        if let reader = runeReader, !runeIDs.isEmpty,
+           let hit = reader.best(
+            in: corner,
+            windowW: max(8, Int((17 * scale).rounded())),
+            windowH: max(8, Int((17 * scale).rounded())), stride: 2),
+           hit.match.score > bestScore {
+            bestScore = hit.match.score
+            best = .card(ids: runeIDs, confidence: hit.match.score)
+        }
         if let reader = pillReader,
            let hit = reader.best(
             in: corner,
@@ -376,6 +418,43 @@ final class RoomScanner {
         log("floor pill at (\(Int(position.x)),\(Int(position.y))): colour \(hit.match.index) "
                 + String(format: "%.3f", hit.match.score))
         return hit.match
+    }
+
+    /// Reads a card lying on the floor at its logged position. Returns every id the art
+    /// could be -- more than one only where the game draws two identically.
+    func readFloorCard(at position: (x: Double, y: Double), items: [Item])
+        async throws -> [Int]?
+    {
+        loadCardTemplates(items: items)
+        let shot = try await captureGameWindow()
+        guard let rect = Self.screenRect(
+            forRoomPosition: CGPoint(x: position.x, y: position.y),
+            in: CGSize(width: shot.width, height: shot.height)),
+            let crop = shot.cropping(to: rect)
+        else { return nil }
+        if ProcessInfo.processInfo.environment["ISAAC_SCAN_DEBUG"] == "1" {
+            Self.dump(crop, name: "floor-card-\(Int(position.x))-\(Int(position.y))")
+        }
+        let scale = min(CGFloat(shot.width) / 480, CGFloat(shot.height) / 270)
+        for (reader, w, h) in [(cardReader, 15.0, 20.0), (runeReader, 17.0, 17.0)] {
+            guard let reader,
+                  let hit = reader.best(
+                    in: crop,
+                    windowW: max(8, Int((w * scale).rounded())),
+                    windowH: max(8, Int((h * scale).rounded())), stride: 2)
+            else { continue }
+            var ids = [hit.match.index]
+            if let c = crop.cropping(to: hit.rect),
+               let (rgb, _) = SpriteColourReader.rgba(
+                c, width: reader.width, height: reader.height, smooth: true) {
+                let tied = reader.ranked(candidate: rgb).best.map(\.index)
+                if tied.count > 1 { ids = tied.sorted() }
+            }
+            log("floor card at (\(Int(position.x)),\(Int(position.y))): \(ids) "
+                    + String(format: "%.3f", hit.match.score))
+            return ids
+        }
+        return nil
     }
 
     /// Writes an image to the scratch dir so a failing scan can actually be looked at.

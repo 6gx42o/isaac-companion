@@ -274,3 +274,67 @@ struct LivePocketTests {
         #expect(hit.match.index == 9, "read card \(hit.match.index), expected 9 (VIII - Justice)")
     }
 }
+
+private func runeStrip() -> CGImage? {
+    let url = URL(fileURLWithPath: NSHomeDirectory())
+        .appending(path: "Library/Application Support/IsaacCompanion/data/abplus/runes_hud.png")
+    guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+    return CGImageSourceCreateImageAtIndex(src, 0, nil)
+}
+
+private let runes = runeStrip()
+
+@Suite("Every pocket sprite", .enabled(if: atlas != nil, "no built data on this machine"))
+struct EveryPocketSpriteTests {
+    /// Every tarot card must identify from its own art. These are the 43 the HUD draws
+    /// at 14x18, and they are the overwhelming majority of what lands in a pocket slot.
+    @Test("every card-shaped sprite identifies as itself")
+    func everyCardIdentifies() throws {
+        let sprites = cardSprites().filter {
+            let art = SpriteColourReader.trimmed($0.image)
+            return abs(Double(art.width) / Double(max(art.height, 1)) - 14.0 / 18.0) < 0.15
+        }
+        #expect(sprites.count >= 40, "expected the tarot cards, got \(sprites.count)")
+        let reader = try #require(
+            SpriteColourReader(
+                width: SpriteColourReader.cardW, height: SpriteColourReader.cardH,
+                sprites: sprites))
+        var wrong: [String] = []
+        for s in sprites {
+            let prepared = SpriteColourReader.rgba(
+                SpriteColourReader.trimmed(s.image),
+                width: SpriteColourReader.cardW, height: SpriteColourReader.cardH)
+            let rgb = try #require(prepared?.0)
+            let best = reader.ranked(candidate: rgb).best
+            if !best.contains(where: { $0.index == s.id }) {
+                wrong.append("\(s.id)->\(best.map(\.index))")
+            }
+        }
+        #expect(wrong.isEmpty, "\(wrong.count) misread: \(wrong.prefix(5).joined(separator: " "))")
+    }
+
+    /// Runes are the honest limit, and it is the game's, not the reader's: the HUD draws
+    /// THREE generic stones for every rune in the game. So a rune is recognisable as a
+    /// rune and never as which one -- and the browser art (the giant-book pickup plate)
+    /// must not be used here, because it is not what the slot ever shows.
+    @Test("the rune stones are the three the HUD actually draws")
+    func runeStonesAreTheHUDs() throws {
+        let strip = try #require(runes, "runes_hud.png not built on this machine")
+        #expect(strip.width / strip.height == 3, "the game draws three rune stones")
+        let reader = try #require(
+            SpriteColourReader(strip: strip, side: SpriteColourReader.pillSide))
+        #expect(reader.templates.count == 3)
+        // Each stone identifies as itself, which is all that is needed: any of them
+        // means "a rune", and the caller answers with every rune id at once.
+        let cell = strip.height
+        for i in 0..<3 {
+            let crop = try #require(
+                strip.cropping(to: CGRect(x: i * cell, y: 0, width: cell, height: cell)))
+            let prepared = SpriteColourReader.rgba(
+                SpriteColourReader.trimmed(crop),
+                width: SpriteColourReader.pillSide, height: SpriteColourReader.pillSide)
+            let rgb = try #require(prepared?.0)
+            #expect(reader.scores(candidate: rgb).first?.index == i, "stone \(i)")
+        }
+    }
+}

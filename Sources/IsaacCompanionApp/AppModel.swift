@@ -568,11 +568,26 @@ public final class AppModel {
             if case .pillSpawned(let x, let y) = event {
                 scheduleFloorPillRead(at: (x, y), after: 0.7)
                 schedulePocketRead(after: 2.5)
+                // A second look later: 2.5s assumes you walk straight over, and often
+                // you clear the room first. Cheap, and it is the difference between
+                // catching a pickup and not.
+                schedulePocketRead(after: 9)
             }
-            if case .cardSpawned = event { schedulePocketRead(after: 2.5) }
+            if case .cardSpawned(let x, let y) = event {
+                // Cards get the same floor read pills do -- the card sits there until
+                // collected, and reading it where it lies beats waiting for the slot.
+                scheduleFloorCardRead(at: (x, y), after: 0.7)
+                schedulePocketRead(after: 2.5)
+                schedulePocketRead(after: 9)
+            }
             if case .roomEntered = event {
                 floorPillColour = nil
                 floorPillAmbiguous = false
+                // The pocket may have changed in a room whose contents were never
+                // logged -- the game only announces a room's spawns the FIRST time it
+                // is generated, so a card picked up on a return visit has no line at
+                // all. A read on entry is the only thing that catches those.
+                schedulePocketRead(after: 1.2)
             }
 
             // The pocket slot was used. This is the ONLY moment the log admits a
@@ -1280,6 +1295,25 @@ public final class AppModel {
             } else {
                 self.floorPillColour = match.index
             }
+        }
+    }
+
+    /// Reads a card lying on the floor at its logged position. Same reasoning as the
+    /// pill version: the card sits still, the pocket slot does not.
+    private func scheduleFloorCardRead(at position: (x: Double, y: Double), after seconds: Double) {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard let self, self.gameProcessRunning, let items = self.bundle?.items
+            else { return }
+            guard let ids = try? await self.scanner.readFloorCard(at: position, items: items),
+                  let first = ids.first
+            else { return }
+            // Only when the art names exactly one card. Blank Rune and Black Rune share
+            // a sprite, and a coin flip is not an answer.
+            guard ids.count == 1 else { return }
+            self.heldCard = first
+            self.heldCardAlternatives = ids
+            self.heldPill = nil
         }
     }
 

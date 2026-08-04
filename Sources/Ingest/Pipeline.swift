@@ -477,6 +477,13 @@ public struct Pipeline: Sendable {
             written += strip.count
         }
 
+        // The three rune stones the HUD draws, so the pocket reader can recognise "a
+        // rune" without pretending to know which.
+        if let runes = try? Data(contentsOf: Extractor.hudRunes) {
+            try runes.write(to: staging.appending(path: "runes_hud.png"))
+            written += runes.count
+        }
+
         // The stat HUD's icons, verbatim. Sixteen-pixel cells, so no atlas index is
         // needed -- the layout is fixed by the game's own hudstats.anm2.
         if let hud = try? Data(contentsOf: Extractor.hudStats) {
