@@ -560,9 +560,26 @@ public final class AppModel {
         // archived -- see archiveCurrentRun.
         if !didInitialReplay {
             didInitialReplay = true
-            // A run already in progress at attach: its start is unknown, so the best
-            // honest answer is "when we started watching".
-            if run.seed != nil { runStartedAt = Date() }
+            if run.seed != nil {
+                // A run already in progress at attach. If this same run was being
+                // archived before the app restarted -- an update or a crash mid-run --
+                // the newest entry with this seed is IT, and adopting its start time
+                // (and therefore its id, which derives from it) makes our saves
+                // overwrite that entry instead of filing the run twice. This exact
+                // duplicate shipped: an app swap mid-run left one checkpoint entry and
+                // one final entry for a single Cain run.
+                //
+                // Recency-gated so a deliberate same-seed replay next week still gets
+                // its own entry.
+                if let previous = history.first(where: { $0.seed == run.seed }),
+                   Date().timeIntervalSince(previous.startedAt) < 12 * 3600 {
+                    runStartedAt = previous.startedAt
+                } else {
+                    // Its start is genuinely unknown, so the best honest answer is
+                    // "when we started watching".
+                    runStartedAt = Date()
+                }
+            }
             startRunCheckpoints()
         }
     }
