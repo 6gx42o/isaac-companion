@@ -248,7 +248,12 @@ public final class AppModel {
     private func startRunCheckpoints() {
         checkpointTimer?.invalidate()
         checkpointTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
-            Task { @MainActor [weak self] in self?.archiveCurrentRun(inProgress: true) }
+            Task { @MainActor [weak self] in
+                // Nothing is progressing while the game is closed, and re-saving the
+                // same finished run as "in progress" would undo the shutdown finalise.
+                guard let self, self.gameProcessRunning else { return }
+                self.archiveCurrentRun(inProgress: true)
+            }
         }
         history = archive.load()
     }
@@ -574,6 +579,15 @@ public final class AppModel {
             // consumable was swallowed, and by the time it fires the slot is empty --
             // so the answer is whatever was read from it beforehand.
             if case .pocketItemUsed = event { recordPocketUse() }
+
+            // The game closed: the run is over, so file it as finished rather than
+            // leaving the last checkpoint saying "in progress" forever. Found live --
+            // a run with a death recorded and the game long gone still had no endedAt.
+            if case .shutdown = event {
+                reducer.apply(event, to: &run)
+                archiveCurrentRun()
+                continue
+            }
 
             reducer.apply(event, to: &run)
         }

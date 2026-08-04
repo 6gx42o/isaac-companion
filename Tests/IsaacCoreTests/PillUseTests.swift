@@ -309,3 +309,51 @@ struct FloorPillTests {
         #expect(f.loop.awaiting == [8], "the observed colour, not the deduced one")
     }
 }
+
+@Suite("Run finalisation")
+struct RunFinalisationTests {
+    /// Model of when a run stops being "in progress". Found live: a Lazarus run with a
+    /// death recorded and the game long since closed was still filed with no end time,
+    /// because nothing acted on the shutdown line and the checkpoint timer kept
+    /// re-saving it as ongoing.
+    private struct Archive {
+        var endedAt: Int?
+        var saves = 0
+        var gameRunning = true
+
+        mutating func checkpoint(_ tick: Int) {
+            // Checkpoints only mean something while the game is actually running.
+            guard gameRunning else { return }
+            saves += 1
+            endedAt = nil
+        }
+
+        mutating func shutdown(_ tick: Int) {
+            gameRunning = false
+            saves += 1
+            endedAt = tick
+        }
+    }
+
+    @Test("the game shutting down finalises the run")
+    func shutdownFinalises() {
+        var a = Archive()
+        a.checkpoint(1)
+        #expect(a.endedAt == nil, "still playing")
+        a.shutdown(2)
+        #expect(a.endedAt == 2, "the run is over when the game closes")
+    }
+
+    /// The bug that made it permanent: a checkpoint after the shutdown would clear the
+    /// end time again, so the run reverted to "in progress" within the minute.
+    @Test("checkpoints after shutdown do not reopen the run")
+    func checkpointsStopWithTheGame() {
+        var a = Archive()
+        a.shutdown(2)
+        let savesAtShutdown = a.saves
+        a.checkpoint(3)
+        a.checkpoint(4)
+        #expect(a.endedAt == 2, "a finished run stayed finished")
+        #expect(a.saves == savesAtShutdown, "no pointless writes while the game is closed")
+    }
+}
