@@ -562,6 +562,10 @@ public final class AppModel {
         if !didInitialReplay {
             didInitialReplay = true
             if run.seed != nil {
+                // The lookup below is only as good as what is loaded: in a fresh
+                // process `history` is empty until the first save, which made the
+                // adoption a silent no-op and filed the duplicate it exists to prevent.
+                if history.isEmpty { history = archive.load() }
                 // A run already in progress at attach. If this same run was being
                 // archived before the app restarted -- an update or a crash mid-run --
                 // the newest entry with this seed is IT, and adopting its start time
