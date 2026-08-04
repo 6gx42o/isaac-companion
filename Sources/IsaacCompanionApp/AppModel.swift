@@ -1054,6 +1054,11 @@ public final class AppModel {
     public var canMeasureBase: Bool {
         run.playerType != nil
             && !run.items.contains { resolve($0)?.kind.isAutoTracked ?? false }
+            // A swallowed pill can be a stat pill, and Lazarus STARTS with a pill --
+            // he can use it before touching any item, at which point the HUD is no
+            // longer his baseline. Strict here for the same reason as everywhere:
+            // this table must never inherit an error from anything else.
+            && run.pocketUses == 0
     }
 
     /// Records what the HUD showed as this character's baseline.
