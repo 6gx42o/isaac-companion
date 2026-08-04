@@ -12,6 +12,7 @@ log while you play and tells you what your damage and fire rate **actually are**
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-b81f22?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/macOS%2014%2B-universal-e2542b?style=flat-square)](#install)
 [![Windows](https://img.shields.io/badge/Windows-x64-9a7f75?style=flat-square)](#the-windows-build)
+[![Linux](https://img.shields.io/badge/Linux-x86--64-9a7f75?style=flat-square)](#the-windows-build)
 [![CI](https://img.shields.io/github/actions/workflow/status/6gx42o/isaac-companion/ci.yml?branch=main&style=flat-square&label=tests&color=7e9c46)](https://github.com/6gx42o/isaac-companion/actions/workflows/ci.yml)
 [![Downloads](https://img.shields.io/github/downloads/6gx42o/isaac-companion/total?style=flat-square&color=b8860f&label=downloads)](https://github.com/6gx42o/isaac-companion/releases)
 [![No mod required](https://img.shields.io/badge/achievements-still%20count-d9a441?style=flat-square)](#no-mod-required)
@@ -46,6 +47,7 @@ or build it yourself — see [Building](#building).
 |---|---|
 | **macOS** | `.dmg`, `.pkg` or `.zip` — one universal binary, Apple Silicon *and* Intel. macOS 14+. |
 | **Windows** | a single `.exe`, no installer and no runtime. |
+| **Linux** | a single x86-64 binary. `chmod +x` and run it. |
 
 ### Opening it the first time
 

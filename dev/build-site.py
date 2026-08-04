@@ -63,10 +63,13 @@ REPO_SLUG = "6gx42o/isaac-companion"
 # .exe is a different program -- see win/ -- running the same log parser and the same
 # Afterbirth+ stat model.
 SUFFIX = {
-    "zip": ".zip",
+    # Longest-first matters: "-windows-x64.zip" also ends in ".zip", and the Linux
+    # binary has no extension at all, so it is matched on its full suffix.
+    "exe": "-windows-x64.exe",
+    "lin": "-linux-x64",
     "dmg": ".dmg",
     "pkg": ".pkg",
-    "exe": "-windows-x64.exe",
+    "zip": ".zip",
 }
 
 
@@ -88,6 +91,13 @@ def release_assets():
     out = {}
     for a in rel.get("assets", []):
         for kind, suffix in SUFFIX.items():
+            if kind in out:
+                continue
+            # "-windows-x64.zip" also ends in ".zip", so a plain suffix test hands the
+            # Mac app-bundle slot a 273 KB Windows archive. The zip that belongs to the
+            # Mac build is the one with no platform in its name.
+            if kind == "zip" and "-windows-" in a["name"]:
+                continue
             if a["name"].endswith(suffix):
                 out[kind] = {
                     "url": a["browser_download_url"],
@@ -2916,6 +2926,7 @@ footer a{color:var(--dim)}
         <button class="chip dlopt" data-kind="pkg">PKG &#183; installer</button>
         <button class="chip dlopt" data-kind="zip">ZIP &#183; just the app</button>
         <button class="chip dlopt win" data-kind="exe">EXE &#183; Windows</button>
+        <button class="chip dlopt" data-kind="lin">Linux &#183; x86-64</button>
       </div>
 
       <div class="firstrun" id="firstrun-mac">
@@ -2957,6 +2968,28 @@ footer a{color:var(--dim)}
           <h3>It opens in your browser</h3>
           <p>The window that appears is the app. Leave it running while you play; it
             reads the log the game already writes and updates itself as you go.</p>
+        </div>
+      </div>
+
+      <div class="firstrun" id="firstrun-lin" hidden>
+        <div class="firstrun-n">1</div>
+        <div>
+          <h3>Make it executable and run it</h3>
+          <p>One binary, no installer and no packages to add.</p>
+          <p class="firstrun-why" style="margin-top:6px!important">
+            <code>chmod +x IsaacCompanion-linux-x64 &amp;&amp; ./IsaacCompanion-linux-x64</code>
+          </p>
+        </div>
+        <div class="firstrun-n">2</div>
+        <div>
+          <h3>It opens in your browser</h3>
+          <p>The window that appears is the app. Leave it running while you play &#8212;
+            it reads the log the game already writes, from
+            <code>~/.local/share/binding&nbsp;of&nbsp;isaac&nbsp;afterbirth+/</code>,
+            and updates itself as you go.</p>
+          <p class="firstrun-why">Proton and native builds both write there. The overlay
+            and the pedestal scanner are macOS window-server features, so they are absent
+            rather than faked.</p>
         </div>
       </div>
 
@@ -4266,7 +4299,8 @@ document.querySelectorAll(".dlopt").forEach(b=>{
   const android = /android/.test(hay);
   const linux = !android && /linux|x11|cros/.test(hay);
 
-  const NAMES = { dmg:"Disk image", pkg:"Installer", zip:"App bundle", exe:"Windows executable" };
+  const NAMES = { dmg:"Disk image", pkg:"Installer", zip:"App bundle",
+                  exe:"Windows executable", lin:"Linux binary" };
   /* Points the one button at a build and says, on the button, exactly what that is. */
   const aim = (kind, title, note) => {
     main.dataset.kind = kind;
@@ -4282,9 +4316,11 @@ document.querySelectorAll(".dlopt").forEach(b=>{
   // Show the steps for the platform they are actually on. Both sets exist in the page
   // so neither is hidden behind a click, but only the relevant one is in the way.
   const steps = (which)=>{
-    const m = $("firstrun-mac"), w = $("firstrun-win"), alt = document.querySelector(".firstrun-alt");
+    const m = $("firstrun-mac"), w = $("firstrun-win"), l = $("firstrun-lin");
+    const alt = document.querySelector(".firstrun-alt");
     if(m) m.hidden = which !== "mac";
     if(w) w.hidden = which !== "win";
+    if(l) l.hidden = which !== "lin";
     if(alt) alt.hidden = which !== "mac";   // the xattr fallback is a Mac thing
   };
 
@@ -4306,21 +4342,27 @@ document.querySelectorAll(".dlopt").forEach(b=>{
       + "scanner are macOS-only and are not in it.");
     return;
   }
+  if(linux){
+    steps("lin");
+    set("ok", "You are on <b>Linux</b>.");
+    aim("lin", "Download for Linux",
+      "A single x86-64 binary &#8212; no installer, no runtime, no packages. Runs the "
+      + "same log reader and the same stat model as the Mac build; the overlay and the "
+      + "pedestal scanner are macOS window-server features and are not in it.");
+    return;
+  }
   // Not a platform it runs on. Still give the button a sensible target, because the
-  // commonest reason to be here on Linux or a phone is fetching it for another machine.
+  // commonest reason to be here on a phone is fetching it for another machine.
   steps("mac");
   aim("dmg", "Download for macOS",
     "You are not on a machine this runs on, so nothing is pre-selected for you "
     + "&#8212; pick the build for wherever you are installing it.");
-  if(linux){
-    set("no", "You are on <b>Linux</b>. There is no Linux build &#8212; the reference "
-      + "above works fine here, though.");
-  } else if(ios || android){
+  if(ios || android){
     set("no", "You are on a <b>phone or tablet</b>. It is a desktop app, but this "
       + "reference is built to work at this size.");
   } else {
-    set("", "Could not tell what you are on. There are builds for macOS&nbsp;14+ and "
-      + "for Windows.");
+    set("", "Could not tell what you are on. There are builds for macOS&nbsp;14+, "
+      + "Windows and Linux.");
   }
 })();
 
