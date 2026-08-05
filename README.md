@@ -9,6 +9,8 @@
 A live stat readout for *The Binding of Isaac: Afterbirth+* — it reads the game's own
 log while you play and tells you what your damage and fire rate **actually are**.
 
+### [Download it here →](https://6gx42o.github.io/isaac-companion/)
+
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-b81f22?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/macOS%2014%2B-universal-e2542b?style=flat-square)](#install)
 [![Windows](https://img.shields.io/badge/Windows-x64-9a7f75?style=flat-square)](#the-windows-build)
