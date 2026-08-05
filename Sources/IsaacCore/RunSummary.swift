@@ -39,8 +39,26 @@ public struct RunSummary: Codable, Sendable, Equatable, Identifiable {
         public var id: Int
         public var name: String
         public var manual: Bool
-        public init(id: Int, name: String, manual: Bool) {
+        /// Everything below is optional so archives written before these existed still
+        /// decode. nil means "this record predates the field", not "false".
+        ///
+        /// `kind` and `consumed` are load-bearing rather than decorative: ids collide
+        /// across kinds (card 1, pill 1 and collectible 1 are three different things),
+        /// and a swallowed pill is what the stat model counts. Restoring a run without
+        /// them would rebuild it wrong.
+        public var kind: String?
+        public var consumed: Bool?
+        public var stage: Int?
+        public var blind: Bool?
+        public var rerolled: Bool?
+        public init(
+            id: Int, name: String, manual: Bool, kind: String? = nil,
+            consumed: Bool? = nil, stage: Int? = nil, blind: Bool? = nil,
+            rerolled: Bool? = nil
+        ) {
             self.id = id; self.name = name; self.manual = manual
+            self.kind = kind; self.consumed = consumed
+            self.stage = stage; self.blind = blind; self.rerolled = rerolled
         }
     }
 

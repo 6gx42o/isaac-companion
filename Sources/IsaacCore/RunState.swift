@@ -20,14 +20,29 @@ public struct PickupRecord: Sendable, Equatable, Identifiable {
     /// So a consumed record never occupies a pocket slot and is never evicted to make
     /// room -- and it is the one that counts toward stats and transformations.
     public var consumed: Bool
+    /// The floor this was picked up on, or nil for a hand-entered item whose floor
+    /// nobody recorded. Stamped at pickup because the run moves on and the answer
+    /// stops being recoverable the moment the next `Level::Init` arrives.
+    public var stage: Int?
+    public var stageType: Int?
+    /// Picked up while the floor carried Curse of the Blind -- so it was taken without
+    /// knowing what it was. Per FLOOR, not per run: the curse is rolled fresh each
+    /// level, and a run-level flag would libel every later pickup.
+    public var blind: Bool
+    /// Arrived as part of a D4/D100-style reroll rather than off a pedestal. Inferred,
+    /// never logged -- see `RunReducer.removalBurst`.
+    public var rerolled: Bool
     public var id: Int { uid }
 
     public init(
         uid: Int, itemID: Int, name: String, manual: Bool = false, kind: ItemKind? = nil,
-        consumed: Bool = false
+        consumed: Bool = false, stage: Int? = nil, stageType: Int? = nil,
+        blind: Bool = false, rerolled: Bool = false
     ) {
         self.uid = uid; self.itemID = itemID; self.name = name; self.manual = manual
         self.kind = kind; self.consumed = consumed
+        self.stage = stage; self.stageType = stageType
+        self.blind = blind; self.rerolled = rerolled
     }
 }
 
@@ -46,7 +61,15 @@ public struct RunState: Sendable, Equatable {
     public var playerType: Int?
     public var stage: Int = 1
     public var stageType: Int = 0
+    /// Every curse seen this run, in order. Kept for the run history, where "this run
+    /// was cursed" is the interesting fact.
     public var curses: [String] = []
+    /// Curses on the CURRENT floor only, cleared on each `Level::Init`. Isaac rolls
+    /// curses per floor, so this -- not `curses` -- is what a live readout should show
+    /// and what decides whether a pickup was taken blind.
+    public var floorCurses: [String] = []
+    /// True while this floor hides pedestal art.
+    public var blindNow: Bool { floorCurses.contains { $0.localizedCaseInsensitiveContains("blind") } }
     public var items: [PickupRecord] = []
     /// bossIDs beaten this run, in order. The log reports these for every boss.
     public var bossesDefeated: [Int] = []
@@ -69,7 +92,8 @@ public struct RunState: Sendable, Equatable {
 
     public static func == (a: RunState, b: RunState) -> Bool {
         a.seed == b.seed && a.playerType == b.playerType && a.stage == b.stage
-            && a.stageType == b.stageType && a.curses == b.curses && a.items == b.items
+            && a.stageType == b.stageType && a.curses == b.curses
+            && a.floorCurses == b.floorCurses && a.items == b.items
             && a.room == b.room && a.roomVariant == b.roomVariant
             && a.pedestals.count == b.pedestals.count
             && a.pillsOnFloor.count == b.pillsOnFloor.count && a.pocketUses == b.pocketUses
@@ -85,6 +109,21 @@ public struct RunState: Sendable, Equatable {
 public struct RunReducer: Sendable {
     private var nextUID = 1
     private var manualLog: [(itemID: Int, name: String, removed: Bool)] = []
+
+    /// How many collectibles were removed back-to-back, with no other event between.
+    ///
+    /// The log never says "you used a D4". What it does is emit every item's removal
+    /// and then every replacement's addition, so a run of removals immediately followed
+    /// by additions is the shape a reroll leaves behind. Two is the threshold because
+    /// one removal followed by one addition is ambiguous -- plenty of things remove a
+    /// single item -- and a missed mark is a smaller lie than a false one.
+    ///
+    /// Bounded by room and floor changes so a stale count can never reach across a
+    /// pedestal pickup much later.
+    private var removalBurst = 0
+    /// Replacements still owed by the burst above, so every item of a five-item reroll
+    /// gets marked and not just the first four.
+    private var rerollCredits = 0
 
     public init() {}
 
@@ -112,6 +151,7 @@ public struct RunReducer: Sendable {
             state.seed = seed
             state.gameRunning = true
             manualLog.removeAll()
+            removalBurst = 0; rerollCredits = 0
 
         case .playerInit(let t):
             state.playerType = t
@@ -121,12 +161,18 @@ public struct RunReducer: Sendable {
             state.stageType = type
             state.pedestals.removeAll()
             state.pillsOnFloor.removeAll()
+            // Curses are rolled per floor. The log announces the new floor's curse
+            // just after this line, so clearing here is what makes the next one mean
+            // "on this floor" instead of "at some point this run".
+            state.floorCurses.removeAll()
+            removalBurst = 0; rerollCredits = 0
 
         case .roomEntered(let type, let variant):
             state.room = type
             state.roomVariant = variant
             state.pedestals.removeAll()
             state.pillsOnFloor.removeAll()
+            removalBurst = 0; rerollCredits = 0
 
         case .pedestalSpawned(let x, let y):
             state.pedestals.append((x, y))
@@ -144,10 +190,24 @@ public struct RunReducer: Sendable {
             state.pocketUses += 1
 
         case .itemAdded(let id, let name):
-            state.items.append(PickupRecord(uid: nextUID, itemID: id, name: name))
+            // Latch the whole burst on the first replacement, rather than counting it
+            // down directly: decrementing the burst itself drops below the threshold
+            // partway through and leaves the last item of a five-item reroll unmarked.
+            if removalBurst >= 2 {
+                rerollCredits = removalBurst
+                removalBurst = 0
+            }
+            let fromReroll = rerollCredits > 0
+            if fromReroll { rerollCredits -= 1 }
+            state.items.append(
+                PickupRecord(
+                    uid: nextUID, itemID: id, name: name,
+                    stage: state.stage, stageType: state.stageType,
+                    blind: state.blindNow, rerolled: fromReroll))
             nextUID += 1
 
         case .itemRemoved(let id):
+            removalBurst += 1
             // Remove the most recent matching pickup, log-sourced ones first so a
             // manual correction is not silently undone by a later replay.
             if let i = state.items.lastIndex(where: { $0.itemID == id && !$0.manual })
@@ -157,6 +217,7 @@ public struct RunReducer: Sendable {
 
         case .curse(let c):
             if !state.curses.contains(c) { state.curses.append(c) }
+            if !state.floorCurses.contains(c) { state.floorCurses.append(c) }
 
         case .died(let killedBy, let spawnedBy):
             state.death = DeathRecord(
@@ -167,6 +228,20 @@ public struct RunReducer: Sendable {
         case .shutdown:
             state.gameRunning = false
         }
+    }
+
+    /// Puts a previously-recorded pickup back, exactly as it was.
+    ///
+    /// Distinct from `manualAdd`: that one enforces slot capacity, because a person
+    /// adding a second trinket by hand has probably made a mistake. This is replaying
+    /// a build that was already valid when it was archived, so nothing is evicted and
+    /// nothing is second-guessed. The uid is reassigned -- ids are per-session and the
+    /// archived one means nothing here.
+    public mutating func restore(_ record: PickupRecord, to state: inout RunState) {
+        var r = record
+        r.uid = nextUID
+        nextUID += 1
+        state.items.append(r)
     }
 
     /// `capacity` is how many of this section the run can hold right now -- 1 by

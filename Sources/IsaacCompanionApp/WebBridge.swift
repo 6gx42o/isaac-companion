@@ -72,6 +72,31 @@ struct WebView: NSViewRepresentable {
             webView?.evaluateJavaScript("window.onHistory(\(model.historyJSON()))")
         }
 
+        func pushLogPath() {
+            webView?.evaluateJavaScript("window.onLogPath(\(model.logPathJSON()))")
+        }
+
+        func pushStreamText() {
+            webView?.evaluateJavaScript("window.onStreamText(\(model.streamTextJSON()))")
+        }
+
+        func pushResumeSavedRuns() {
+            webView?.evaluateJavaScript("window.onResumeSavedRuns(\(model.resumeSavedRuns))")
+        }
+
+        private func chooseStreamDir() {
+            let panel = NSOpenPanel()
+            panel.canChooseFiles = false
+            panel.canChooseDirectories = true
+            panel.canCreateDirectories = true
+            panel.allowsMultipleSelection = false
+            panel.message = "Pick a folder for the text files OBS will read"
+            if panel.runModal() == .OK, let url = panel.url {
+                model.streamTextDir = url
+                model.refreshStreamText()
+            }
+        }
+
         /// A Swift string as a JavaScript string literal, via the JSON encoder rather
         /// than by hand. The hand-rolled version replaced double quotes with single
         /// quotes and nothing else, so a backslash or newline in an error message --
@@ -204,6 +229,43 @@ struct WebView: NSViewRepresentable {
                 if let mode = (body["mode"] as? String).flatMap(StorageMode.init(rawValue:)) {
                     model.storageMode = mode
                 }
+            case "logPath":
+                pushLogPath()
+            case "streamText":
+                pushStreamText()
+            case "setStreamText":
+                if let on = body["value"] as? Bool {
+                    model.streamTextEnabled = on
+                    // Turning it on with no folder yet is a dead switch, so ask for one
+                    // in the same gesture rather than leaving it silently doing nothing.
+                    if on, model.streamTextDir == nil { chooseStreamDir() }
+                    if on { model.refreshStreamText() }
+                }
+                pushStreamText()
+            case "chooseStreamDir":
+                chooseStreamDir()
+                pushStreamText()
+            case "resumeSavedRuns":
+                pushResumeSavedRuns()
+            case "setResumeSavedRuns":
+                if let on = body["value"] as? Bool { model.resumeSavedRuns = on }
+                pushResumeSavedRuns()
+            case "chooseLogPath":
+                let panel = NSOpenPanel()
+                panel.canChooseFiles = true
+                panel.canChooseDirectories = false
+                panel.allowsMultipleSelection = false
+                panel.message = "Select the log.txt your copy of Isaac writes"
+                panel.directoryURL = DataPaths.logFile.deletingLastPathComponent()
+                if panel.runModal() == .OK, let url = panel.url {
+                    model.useLogFile(url)
+                    push(model.stateJSON(), force: true)
+                }
+                pushLogPath()
+            case "clearLogPath":
+                model.useLogFile(nil)
+                push(model.stateJSON(), force: true)
+                pushLogPath()
             case "rebuildData":
                 Task { @MainActor in
                     await model.rebuild()

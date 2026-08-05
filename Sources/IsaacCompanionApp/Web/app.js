@@ -1038,6 +1038,26 @@ function heldRow(held) {
   // holding no slot. Saying so is the difference between "you have a pill" and "that
   // pill already changed your speed".
   if (held.consumed) head.appendChild(el("span", "pill used", "used"));
+  // Context the log never states outright, each on its own switch. Deliberately not
+  // `.pill`: these answer "where did this come from", not "what kind of thing is it",
+  // so turning the kind tags off should not take them with it.
+  if (held.stage != null) {
+    const f = el("span", "mk mk-floor", "F" + held.stage);
+    f.title = "Picked up on floor " + held.stage;
+    head.appendChild(f);
+  }
+  if (held.blind) {
+    const b = el("span", "mk mk-blind", "blind");
+    b.title = "Taken during Curse of the Blind — you could not see what it was.";
+    head.appendChild(b);
+  }
+  if (held.rerolled) {
+    const r = el("span", "mk mk-reroll", "reroll");
+    r.title = "Arrived from a reroll (D4/D100), not off a pedestal. Inferred from the "
+      + "log, which never says so directly.";
+    head.appendChild(r);
+  }
+  if (held.id != null) head.appendChild(el("span", "mk mk-id", "#" + held.id));
   body.appendChild(head);
   // The reason it is dead outranks its own description — that is the thing you
   // need, and the description is now mostly irrelevant.
@@ -2583,6 +2603,63 @@ const SETTINGS = [
       { id: "showNotes", type: "switch", label: "Build conflict notes", def: true,
         desc: "Warnings when something you are carrying overrides something else.",
         apply: dataAttr("data-notes") },
+
+      { id: "showFloors", type: "switch", label: "Floor each item came from", def: true,
+        desc: "An <span class='mk mk-floor'>F3</span> badge on every pickup. The log "
+          + "does not record this, so it is stamped when the item arrives.",
+        apply: dataAttr("data-floors") },
+
+      { id: "showBlind", type: "switch", label: "Mark blind pickups", def: true,
+        desc: "Flags items taken during <em>Curse of the Blind</em>, when you could not "
+          + "see what you were grabbing. Per floor &#8212; the curse is rolled fresh "
+          + "each level.",
+        apply: dataAttr("data-blind") },
+
+      { id: "showRerolls", type: "switch", label: "Mark rerolled items", def: true,
+        desc: "Flags items that arrived from a D4 or D100 rather than a pedestal. "
+          + "<b>Inferred</b>: the log never says a reroll happened, so this reads it "
+          + "from a burst of removals. A single swap is left unmarked rather than "
+          + "guessed at.",
+        apply: dataAttr("data-rerolls") },
+
+      { id: "showItemIDs", type: "switch", label: "Item ID numbers", def: false,
+        desc: "The internal collectible id next to each name. Useful for reporting a "
+          + "bug or looking something up in the game's own files.",
+        apply: dataAttr("data-itemids") },
+    ],
+  },
+
+  {
+    group: "Streaming",
+    blurb: "For putting the run on stream. Everything here is off until you ask for it, "
+      + "and none of it sends anything anywhere &#8212; the files are written on your "
+      + "own disk, for OBS to read.",
+    items: [
+      { id: "streamText", type: "switch", label: "Write text files for OBS", def: false,
+        desc: "One small .txt per fact &#8212; seed, character, floor, each stat, "
+          + "transformation progress, the item list. Point an OBS <em>Text (GDI+)</em> "
+          + "source at a file and it updates itself as you play.",
+        native: true,
+        apply: (v) => send({ type: "setStreamText", value: v }) },
+
+      { id: "streamDir", type: "action", label: "Text file folder", action: "Choose…",
+        desc: "Where those files go.",
+        native: true,
+        apply: () => send({ type: "chooseStreamDir" }) },
+    ],
+  },
+
+  {
+    group: "Runs",
+    blurb: "How a run is followed across pauses and restarts.",
+    items: [
+      { id: "resumeSavedRuns", type: "switch", label: "Restore a continued run", def: true,
+        desc: "Afterbirth+ rewrites its log every launch and does not re-announce what "
+          + "you were already carrying, so continuing a saved run would otherwise come "
+          + "back with an empty build and base stats. This puts the items back from the "
+          + "last checkpoint. Only ever adds what the log is missing.",
+        native: true,
+        apply: (v) => send({ type: "setResumeSavedRuns", value: v }) },
     ],
   },
 
@@ -2597,6 +2674,19 @@ const SETTINGS = [
           + "identical data &#8212; it trades disk for rebuild speed, never features.",
         native: true,
         apply: (v) => send({ type: "setStorageMode", mode: v }) },
+
+      { id: "logPathChoose", type: "action", label: "Log file", action: "Choose…",
+        desc: "Finding this automatically is the normal case. Pick it by hand for a "
+          + "non-Steam install, a second Steam library, or a log copied off another "
+          + "machine.",
+        native: true,
+        apply: () => send({ type: "chooseLogPath" }) },
+
+      { id: "logPathReset", type: "action", label: "Use the detected log",
+        action: "Reset", busy: "Resetting…",
+        desc: "Goes back to the file the app finds on its own.",
+        native: true,
+        apply: () => send({ type: "clearLogPath" }) },
 
       { id: "rebuild", type: "action", label: "Rebuild the data", action: "Rebuild now",
         busy: "Rebuilding\u2026",
@@ -2714,6 +2804,64 @@ window.onRebuilt = (ok) => {
   setTimeout(() => { if (item.node) item.node.textContent = item.action; }, 4000);
 };
 
+/* Swift resolves which log is actually being tailed, so the row reports that rather
+   than repeating the generic blurb. Also clears the button's busy state, which the
+   action control sets optimistically on click. */
+window.onLogPath = (info) => {
+  const items = SETTINGS.flatMap((g) => g.items);
+  for (const id of ["logPathChoose", "logPathReset"]) {
+    const item = items.find((i) => i.id === id);
+    if (item && item.node) { item.node.disabled = false; item.node.textContent = item.action; }
+  }
+  const row = $("setrow-logPathChoose");
+  const desc = row && row.querySelector(".set-desc");
+  if (!desc || !info) return;
+  const where = el("code", "", info.path || "");
+  desc.textContent = "";
+  if (info.missing) {
+    desc.append("The log you chose is gone, so the detected one is in use: ");
+  } else if (info.custom) {
+    desc.append("Using the log you chose: ");
+  } else {
+    desc.append("Detected automatically: ");
+  }
+  desc.appendChild(where);
+  const reset = $("setrow-logPathReset");
+  if (reset) reset.hidden = !info.custom && !info.missing;
+};
+
+/* Swift owns these two, because both are read before the page exists -- the resume
+   happens during the first log replay, and the OBS folder is a native picker. The page
+   reflects what Swift reports rather than keeping a second copy that could disagree. */
+function reflectSwitch(id, on) {
+  setStore[id] = on;
+  const row = $("setrow-" + id);
+  const box = row && row.querySelector('input[type="checkbox"]');
+  if (box) box.checked = !!on;
+}
+
+window.onResumeSavedRuns = (on) => reflectSwitch("resumeSavedRuns", on);
+
+window.onStreamText = (info) => {
+  if (!info) return;
+  reflectSwitch("streamText", info.enabled);
+  const item = SETTINGS.flatMap((g) => g.items).find((i) => i.id === "streamDir");
+  if (item && item.node) { item.node.disabled = false; item.node.textContent = item.action; }
+  const row = $("setrow-streamDir");
+  const desc = row && row.querySelector(".set-desc");
+  if (desc) {
+    desc.textContent = "";
+    if (info.dir) {
+      desc.append("Writing to ");
+      desc.appendChild(el("code", "", info.dir));
+    } else {
+      desc.append("No folder chosen yet, so nothing is being written.");
+    }
+  }
+  // The folder row is meaningless until the feature is on.
+  if (row) row.hidden = !info.enabled;
+};
+
 /* ---- rendering -------------------------------------------------------------
    Built from the list above rather than written out in index.html, so the markup
    and the behaviour cannot drift apart. */
@@ -2793,6 +2941,9 @@ function renderSettings() {
     }
     for (const item of group.items) {
       const row = el("div", "set-row");
+      // Addressable so a native-backed row can rewrite its own description with the
+      // value Swift actually resolved, instead of restating the default.
+      row.id = "setrow-" + item.id;
       row.dataset.search = (item.label + " " + item.desc).toLowerCase().replace(/<[^>]+>/g, "");
       const text = el("div", "set-text");
       text.appendChild(el("div", "set-label", item.label));
@@ -2802,6 +2953,13 @@ function renderSettings() {
     }
     host.appendChild(sec);
   }
+  // Rendering throws away anything Swift had rewritten, so ask again. Also covers
+  // "Reset all settings", which re-renders the whole page.
+  try {
+    send({ type: "logPath" });
+    send({ type: "streamText" });
+    send({ type: "resumeSavedRuns" });
+  } catch (e) { /* not running under the app */ }
 }
 
 /* ---- load, apply, filter ---------------------------------------------------- */

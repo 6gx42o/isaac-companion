@@ -437,6 +437,19 @@ input::placeholder { color: var(--faint); }
 .pill.singleSource, .pill.conditional { color: var(--warn); border-color: var(--warn-line); }
 .pill.manual { color: var(--mark); border-color: var(--mark-line); }
 
+/* Provenance marks: where a pickup came from, as opposed to what it is. Same shape as
+   .pill so a row still reads as one line, but a separate class so each has its own
+   switch and the kind-tag toggle does not sweep them up. */
+.mk {
+  font-family: var(--mono); font-size: 8px; letter-spacing: .14em; text-transform: uppercase;
+  padding: 2px 5px; border: 1px solid var(--rule2); color: var(--faint);
+  margin-left: 7px; white-space: nowrap; vertical-align: 2px;
+}
+.mk-floor { color: var(--dim); }
+.mk-blind { color: var(--warn); border-color: var(--warn-line); }
+.mk-reroll { color: var(--hot); border-color: var(--rule2); }
+.mk-id { color: var(--faint); }
+
 button.remove {
   background: none; border: none; color: var(--faint); cursor: pointer;
   font-size: 15px; padding: 0 4px; line-height: 1;
@@ -3386,3 +3399,9 @@ kbd {
 
 /* Something that works but has never been proven against the real thing. */
 .pill.beta { border-color: var(--warn); color: var(--warn); margin-left: 6px; }
+
+/* Each mark answers to exactly one setting. Defaults live in SETTINGS, not here. */
+:root[data-floors="off"] .mk-floor { display: none; }
+:root[data-blind="off"] .mk-blind { display: none; }
+:root[data-rerolls="off"] .mk-reroll { display: none; }
+:root[data-itemids="off"] .mk-id { display: none; }

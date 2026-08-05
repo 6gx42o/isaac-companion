@@ -26,7 +26,38 @@ public enum DataPaths {
         if let override = ProcessInfo.processInfo.environment["ISAAC_LOG_PATH"] {
             return URL(fileURLWithPath: override)
         }
+        if let custom = customLogPath { return custom }
         return VersionDetector.logFile(for: detected)
+    }
+
+    /// A log file the user picked by hand, for installs auto-detection cannot find:
+    /// a non-Steam copy, a second library, or a log copied off another machine.
+    ///
+    /// Below the environment variable on purpose -- that one is a developer escape
+    /// hatch and has to win -- and above auto-detection, which is the thing being
+    /// overridden. A stored path that has since gone missing is ignored rather than
+    /// honoured, so deleting the file falls back to auto-detect instead of tailing
+    /// nothing forever.
+    public static let customLogKey = "customLogPath"
+
+    public static var customLogPath: URL? {
+        get {
+            guard let s = UserDefaults.standard.string(forKey: customLogKey), !s.isEmpty
+            else { return nil }
+            let url = URL(fileURLWithPath: s)
+            return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        }
+        set {
+            let d = UserDefaults.standard
+            if let newValue { d.set(newValue.path, forKey: customLogKey) }
+            else { d.removeObject(forKey: customLogKey) }
+        }
+    }
+
+    /// True when a path is stored, whether or not it currently resolves. Lets the UI
+    /// say "your custom log is missing" rather than silently showing the auto path.
+    public static var hasStoredCustomLog: Bool {
+        !(UserDefaults.standard.string(forKey: customLogKey) ?? "").isEmpty
     }
 
     /// Standard Steam location. The setup wizard lets the user pick if this misses.

@@ -4831,7 +4831,7 @@ out = out.encode("ascii", "xmlcharrefreplace").decode("ascii")
 out = out.replace("__DOWNLOADS__", json.dumps(DOWNLOADS, separators=(",", ":")))
 out = out.replace("__RELEASES__", json.dumps(RELEASES_URL))
 out = out.replace("__ICONB64__", ICON_B64).replace("__REPO__", REPO)
-out = out.replace("__TESTS__", "253").replace("__REPOSLUG__", REPO_SLUG)
+out = out.replace("__TESTS__", "271").replace("__REPOSLUG__", REPO_SLUG)
 # Only shown when the API answered. An absent counter is better than a wrong one, and
 # it is dated so nobody reads a build-time snapshot as a live figure.
 if DOWNLOADS_TOTAL is None:

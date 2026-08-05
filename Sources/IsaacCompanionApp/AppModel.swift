@@ -74,6 +74,22 @@ public final class AppModel {
         set { UserDefaults.standard.set(newValue.rawValue, forKey: "storageMode") }
     }
 
+    /// Whether to put a saved-and-quit run's items back when it is continued.
+    ///
+    /// Stored natively rather than in the page's own settings store because it is read
+    /// during the first log replay, which happens well before the web view exists.
+    /// Defaults to on: the alternative is a resumed run silently reporting base stats.
+    public var resumeSavedRuns: Bool {
+        get { UserDefaults.standard.object(forKey: "resumeSavedRuns") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "resumeSavedRuns") }
+    }
+
+    /// Streamer text files: off unless asked for, since it writes to disk on a timer.
+    public var streamTextEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "streamTextEnabled") }
+        set { UserDefaults.standard.set(newValue, forKey: "streamTextEnabled") }
+    }
+
     /// "devil" or "angel". Owned by Swift so the web view and the native panel can
     /// never disagree; the web toggles it through the bridge.
     public var theme: String {
@@ -225,7 +241,10 @@ public final class AppModel {
             finalStageType: run.stageType,
             curses: run.curses,
             items: run.items.map {
-                RunSummary.Item(id: $0.itemID, name: $0.name, manual: $0.manual)
+                RunSummary.Item(
+                    id: $0.itemID, name: $0.name, manual: $0.manual,
+                    kind: $0.kind?.rawValue, consumed: $0.consumed,
+                    stage: $0.stage, blind: $0.blind, rerolled: $0.rerolled)
             },
             bosses: bosses,
             death: run.death.map { bestiary.describeDeath($0) },
@@ -524,6 +543,35 @@ public final class AppModel {
         tailer.start()
     }
 
+    /// Points the tailer at a different file. Unlike `startTailing`, this deliberately
+    /// throws the current run away: a different log is a different game, so carrying
+    /// the old build across would attribute one run's items to another.
+    public func useLogFile(_ url: URL?) {
+        archiveCurrentRun()
+        DataPaths.customLogPath = url
+        tailer?.stop()
+        tailer = nil
+        run = RunState()
+        reducer = RunReducer()
+        runStartedAt = Date()
+        adoptedArchiveID = nil
+        startTailing()
+    }
+
+    /// What the log-path rows in Settings should say right now.
+    public func logPathJSON() -> String {
+        let stored = UserDefaults.standard.string(forKey: DataPaths.customLogKey) ?? ""
+        let payload: [String: Any] = [
+            "path": DataPaths.logFile.path,
+            "custom": DataPaths.customLogPath != nil,
+            // Stored but not resolvable: the user moved or deleted their own choice.
+            "missing": !stored.isEmpty && DataPaths.customLogPath == nil,
+            "stored": stored,
+        ]
+        let data = (try? JSONSerialization.data(withJSONObject: payload)) ?? Data("{}".utf8)
+        return String(decoding: data, as: UTF8.self)
+    }
+
     private func ingest(_ lines: [String]) {
         for line in lines {
             if line == LogTailer.resetMarker {
@@ -632,6 +680,7 @@ public final class AppModel {
                    Date().timeIntervalSince(previous.startedAt) < 12 * 3600 {
                     runStartedAt = previous.startedAt
                     adoptedArchiveID = previous.id
+                    resumeItems(from: previous)
                 } else {
                     // Its start is genuinely unknown, so the best honest answer is
                     // "when we started watching".
@@ -639,6 +688,48 @@ public final class AppModel {
                 }
             }
             startRunCheckpoints()
+        }
+    }
+
+    /// Puts a saved-and-quit run's build back.
+    ///
+    /// Afterbirth+ rewrites `log.txt` on every launch and does NOT re-announce the
+    /// collectibles you already hold when you continue a save, so a resumed run comes
+    /// back with the right seed, character and floor -- and an empty build. The items
+    /// are still in our own archive, because the checkpoint has been writing them all
+    /// along, so this restores from there.
+    ///
+    /// Only ever ADDS what the replayed log is missing. If the log did re-announce an
+    /// item, that copy wins and nothing is duplicated; a build that already looks
+    /// complete is left alone entirely.
+    private func resumeItems(from previous: RunSummary) {
+        guard resumeSavedRuns, !previous.items.isEmpty else { return }
+        // Match on identity, not count: the log may have restored some of them. Keyed
+        // by kind AND id because those ids collide across kinds.
+        func key(_ kind: ItemKind?, _ id: Int) -> String { "\(kind?.rawValue ?? "-"):\(id)" }
+        var have: [String: Int] = [:]
+        for r in run.items { have[key(r.kind, r.itemID), default: 0] += 1 }
+
+        var restored = 0
+        for saved in previous.items {
+            let kind = saved.kind.flatMap(ItemKind.init(rawValue:))
+            let k = key(kind, saved.id)
+            if let n = have[k], n > 0 { have[k] = n - 1; continue }
+            reducer.restore(
+                PickupRecord(
+                    uid: 0, itemID: saved.id, name: saved.name, manual: saved.manual,
+                    kind: kind, consumed: saved.consumed ?? false,
+                    stage: saved.stage, blind: saved.blind ?? false,
+                    rerolled: saved.rerolled ?? false),
+                to: &run)
+            restored += 1
+        }
+        if restored > 0 {
+            buildWarnings.append(
+                "Picked this run back up: \(restored) item\(restored == 1 ? "" : "s") "
+                + "restored from the last checkpoint, because the log does not "
+                + "re-announce what you were already carrying.")
+            recompute()
         }
     }
 
@@ -802,6 +893,58 @@ public final class AppModel {
         character = table.measured(with: measuredBases.measurement(for: run.playerType))
         let owned = statAffecting()
         stats = StatEngine.compute(character: character, items: owned)
+        writeStreamText()
+    }
+
+    /// Mirrors the run into the streamer's text folder, if they asked for one.
+    ///
+    /// Hung off `recompute` rather than a timer so the files move exactly when the run
+    /// does. Failures are swallowed on purpose: a full disk or a folder the user moved
+    /// must not interrupt someone mid-run, and the switch is right there in Settings.
+    private func writeStreamText() {
+        guard streamTextEnabled, let dir = streamTextDir else { return }
+        let progress = (engine?.transformationProgress(held: statAffecting()) ?? [])
+            .map { (name: $0.0.name, have: $0.1, need: $0.0.itemIDs.count) }
+        let fields = StreamText.fields(
+            run: run, stats: stats, characterName: character.name,
+            transformations: progress)
+        streamTextLast = (try? StreamText.write(fields, to: dir, previous: streamTextLast))
+            ?? streamTextLast
+    }
+
+    /// Writes the files immediately, rather than waiting for the next pickup. Turning
+    /// the feature on should populate the folder now, so OBS sources can be wired up
+    /// straight away instead of pointing at files that do not exist yet.
+    public func refreshStreamText() {
+        streamTextLast = [:]
+        writeStreamText()
+    }
+
+    private var streamTextLast: [String: String] = [:]
+
+    /// Where the OBS text files go. nil until the user picks a folder, which is also
+    /// what keeps the feature from writing anywhere by default.
+    public var streamTextDir: URL? {
+        get {
+            guard let s = UserDefaults.standard.string(forKey: "streamTextDir"), !s.isEmpty
+            else { return nil }
+            return URL(fileURLWithPath: s)
+        }
+        set {
+            let d = UserDefaults.standard
+            if let newValue { d.set(newValue.path, forKey: "streamTextDir") }
+            else { d.removeObject(forKey: "streamTextDir") }
+            streamTextLast = [:]   // force a full rewrite into the new folder
+        }
+    }
+
+    public func streamTextJSON() -> String {
+        let payload: [String: Any] = [
+            "enabled": streamTextEnabled,
+            "dir": streamTextDir?.path ?? "",
+        ]
+        let data = (try? JSONSerialization.data(withJSONObject: payload)) ?? Data("{}".utf8)
+        return String(decoding: data, as: UTF8.self)
     }
 
     // MARK: - view model for the web layer
@@ -833,6 +976,13 @@ public final class AppModel {
                 /// A pocket item that was USED rather than one being carried. Used ones
                 /// are what the numbers are made of; a held pill has done nothing yet.
                 var consumed: Bool
+                /// The floor it was picked up on. nil for hand-entered items, which the
+                /// UI renders as no badge rather than as floor zero.
+                var stage: Int?
+                /// Taken while the floor was blind, so it was a gamble at the time.
+                var blind: Bool
+                /// Inferred to have arrived from a D4/D100-style reroll.
+                var rerolled: Bool
             }
             var ready: Bool
             var gameRunning: Bool
@@ -932,7 +1082,10 @@ public final class AppModel {
                 kind: kind.rawValue,
                 dead: reason != nil,
                 deadReason: reason,
-                consumed: record.consumed)
+                consumed: record.consumed,
+                stage: record.stage,
+                blind: record.blind,
+                rerolled: record.rerolled)
         }
 
         var statMap: [String: Payload.StatOut] = [:]
@@ -990,7 +1143,9 @@ public final class AppModel {
             room: String(describing: run.room),
             roomOffersChoice: run.room.offersChoice,
             pedestals: run.pedestals.count,
-            curses: run.curses,
+            // The current floor's curses. The run-wide list is kept for the history,
+            // where "this run was cursed" is the fact worth recording.
+            curses: run.floorCurses,
             items: held,
             stats: statMap,
             shots: stats?.shots ?? 1,

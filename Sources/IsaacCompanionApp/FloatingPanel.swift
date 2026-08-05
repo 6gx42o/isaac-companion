@@ -562,7 +562,9 @@ struct CompactStatsView: View {
     /// Curses, flight and a room worth stopping in.
     private var runTags: [(String, Color)] {
         var out: [(String, Color)] = []
-        for curse in model.run.curses { out.append((curse, theme.mark)) }
+        // This floor's curses, not the run's. Curses are rolled per floor, so the
+        // accumulated list kept claiming you were still blind two floors later.
+        for curse in model.run.floorCurses { out.append((curse, theme.mark)) }
         if model.stats?.flight == true { out.append(("flight", theme.good)) }
         if model.run.room.offersChoice {
             let room = String(describing: model.run.room)
