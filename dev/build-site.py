@@ -4850,6 +4850,16 @@ else:
 for _k in ("zip", "dmg", "pkg", "exe"):
     out = out.replace(f"__{_k.upper()}MB__", DOWNLOADS[_k]["mb"])
 SITE_URL = "https://6gx42o.github.io/isaac-companion/"
+
+# IndexNow: tell Bing, DuckDuckGo, Yandex and Seznam a page changed, without an account
+# anywhere. Ownership is proved by serving this exact string at <key>.txt on the site,
+# which is why the key is a fixed constant and not regenerated per build -- a new key
+# each time would invalidate every submission already made under the old one.
+#
+# Not a secret: its only power is to say "whoever controls this site submitted a URL",
+# and it is publicly readable by design. Google does not participate in IndexNow; that
+# one needs Search Console.
+INDEXNOW_KEY = "e79631586b8504a816811af9aff45770"
 BLURB = ("Live stats, 775 items and synergy warnings for The Binding of Isaac: "
          "Afterbirth+. Reads the game's own log -- no mod, so achievements still count.")
 
@@ -4936,6 +4946,8 @@ def seo_files(directory):
         "User-agent: *\n"
         "Allow: /\n"
         f"Sitemap: {SITE_URL}sitemap.xml\n")
+    # Proof of ownership for IndexNow. Must contain the key and nothing else.
+    (directory / f"{INDEXNOW_KEY}.txt").write_text(INDEXNOW_KEY)
     stamp = _dt.date.today().isoformat()
     (directory / "sitemap.xml").write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
