@@ -3428,8 +3428,9 @@ kbd {
   transition: transform .55s var(--ease);
 }
 .gearic svg { width: 100%; height: 100%; display: block; overflow: visible; }
-.gearic circle { fill: none; stroke: currentColor; stroke-width: 2.1; }
-.gearic .teeth line { stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; }
+/* Filled, not stroked: at 15px a stroked outline closes up into a smudge, and the
+   hub hole is what stops it reading as a flower. */
+.gearic path { fill: currentColor; }
 
 /* One slow half-turn. A gear that spins forever reads as a loading spinner. */
 .gearbtn:hover .gearic,
