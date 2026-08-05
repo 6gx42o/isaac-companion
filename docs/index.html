@@ -13,6 +13,8 @@
 <meta property="og:url" content="https://6gx42o.github.io/isaac-companion/">
 <meta property="og:image" content="https://6gx42o.github.io/isaac-companion/icon.png">
 <meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://6gx42o.github.io/isaac-companion/">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Isaac Companion","description":"Live stats, 775 items and synergy warnings for The Binding of Isaac: Afterbirth+. Reads the game's own log -- no mod, so achievements still count.","url":"https://6gx42o.github.io/isaac-companion/","applicationCategory":"UtilitiesApplication","operatingSystem":"macOS 14+, Windows 10+, Linux x86-64","softwareVersion":"0.5.1","codeRepository":"https://github.com/6gx42o/isaac-companion","license":"https://github.com/6gx42o/isaac-companion/blob/main/LICENSE","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
 </head>
 <body>
 
@@ -2593,7 +2595,11 @@ footer a{color:var(--dim)}
   <div class="wrap">
     <header class="hero">
       <p class="eyebrow">macOS &amp; Windows &#183; Afterbirth+ &#183; no mod required</p>
-      <h1 id="head"></h1>
+      <!-- The words are here, not only in the script that animates them. An h1 is the
+           strongest heading signal a page has, and building it from JS left it empty
+           in the source -- invisible to anything that reads the HTML without running
+           it, and to anyone with JS off. The animation replaces this text. -->
+      <h1 id="head">Know what you just <em>picked up.</em></h1>
       <p class="sell">Isaac never tells you what your stats actually are. This reads the game's
         own log while you play, works out your real damage and fire rate, and warns you when an
         item you just took is <b>doing nothing at all</b>.</p>
@@ -2744,9 +2750,9 @@ footer a{color:var(--dim)}
         </div>
         <div class="ossfacts">
           <div class="ossfact"><b>MIT</b><span>licence</span></div>
-          <div class="ossfact"><b>253</b><span>tests</span></div>
+          <div class="ossfact"><b>271</b><span>tests</span></div>
           <div class="ossfact"><b>0</b><span>runtime deps</span></div>
-          <div class="ossfact" id="dlfact"><b id="dlcount">44</b><span>downloads<i class="asof" id="dlasof">as of 2026-08-04</i></span></div>
+          <div class="ossfact" id="dlfact"><b id="dlcount">50</b><span>downloads<i class="asof" id="dlasof">as of 2026-08-05</i></span></div>
         </div>
       </div>
 
@@ -3257,6 +3263,7 @@ D.items.forEach(i=>{ if(i.frame) byGfx[i.name.toLowerCase()] = i.frame; });
 (function(){
   const words = ["Know ","what ","you ","just ","","picked ","up."];
   const h = $("head"); let d = 0.18;
+  h.textContent = "";   // the crawlable copy is in the markup; swap it for the animated one
   words.forEach((w,i)=>{
     if(w===""){ h.appendChild(document.createElement("br")); return; }
     const s = document.createElement("span");

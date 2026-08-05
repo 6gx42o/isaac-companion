@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://6gx42o.github.io/isaac-companion/sitemap.xml

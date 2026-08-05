@@ -2734,7 +2734,11 @@ footer a{color:var(--dim)}
   <div class="wrap">
     <header class="hero">
       <p class="eyebrow">macOS &amp; Windows &#183; Afterbirth+ &#183; no mod required</p>
-      <h1 id="head"></h1>
+      <!-- The words are here, not only in the script that animates them. An h1 is the
+           strongest heading signal a page has, and building it from JS left it empty
+           in the source -- invisible to anything that reads the HTML without running
+           it, and to anyone with JS off. The animation replaces this text. -->
+      <h1 id="head">Know what you just <em>picked up.</em></h1>
       <p class="sell">Isaac never tells you what your stats actually are. This reads the game's
         own log while you play, works out your real damage and fire rate, and warns you when an
         item you just took is <b>doing nothing at all</b>.</p>
@@ -3398,6 +3402,7 @@ D.items.forEach(i=>{ if(i.frame) byGfx[i.name.toLowerCase()] = i.frame; });
 (function(){
   const words = ["Know ","what ","you ","just ","","picked ","up."];
   const h = $("head"); let d = 0.18;
+  h.textContent = "";   // the crawlable copy is in the markup; swap it for the animated one
   words.forEach((w,i)=>{
     if(w===""){ h.appendChild(document.createElement("br")); return; }
     const s = document.createElement("span");
@@ -4877,12 +4882,74 @@ def standalone(fragment):
         f'<meta property="og:url" content="{SITE_URL}">\n'
         f'<meta property="og:image" content="{SITE_URL}icon.png">\n'
         '<meta name="twitter:card" content="summary">\n'
+        # One page reachable at both /isaac-companion/ and /isaac-companion/index.html.
+        # Saying which is the real one keeps a search engine from treating them as two
+        # pages competing with each other.
+        f'<link rel="canonical" href="{SITE_URL}">\n'
+        f"{structured_data()}"
         f"</head>\n<body>\n{fragment}\n</body>\n</html>\n")
+
+
+def structured_data():
+    """Describes the page as a piece of software rather than leaving it to be guessed.
+
+    Every field here is checked against what actually ships: the version comes from the
+    release the download buttons point at, the platforms from the assets that exist, and
+    the licence from the repository. Claiming a rating or a download count we cannot
+    substantiate is what gets structured data ignored, so there is none.
+    """
+    data = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Isaac Companion",
+        "description": BLURB,
+        "url": SITE_URL,
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "macOS 14+, Windows 10+, Linux x86-64",
+        "softwareVersion": TAG.lstrip("v") if TAG else None,
+        "codeRepository": f"https://github.com/{REPO_SLUG}",
+        "license": f"https://github.com/{REPO_SLUG}/blob/main/LICENSE",
+        "isAccessibleForFree": True,
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+    }
+    data = {k: v for k, v in data.items() if v is not None}
+    blob = json.dumps(data, separators=(",", ":"))
+    return f'<script type="application/ld+json">{blob}</script>\n'
+
+
+def seo_files(directory):
+    """robots.txt and sitemap.xml, written next to the page.
+
+    Neither makes a search engine index anything by itself -- links and a Search Console
+    submission do that. The sitemap is the useful half: it is submitted directly, and
+    carries a date so a recrawl knows whether it is worth its time.
+
+    The robots.txt is honest housekeeping rather than a working control. robots.txt is
+    read per ORIGIN, only ever at the host root -- for this site that is
+    6gx42o.github.io/robots.txt, which belongs to a `<user>.github.io` repository we do
+    not have. At this path nothing reads it. It is written anyway because it costs 85
+    bytes and becomes the real one the moment the site moves to its own domain, and
+    because no robots.txt at the root means "crawl everything" -- so nothing is blocked
+    in the meantime.
+    """
+    (directory / "robots.txt").write_text(
+        "User-agent: *\n"
+        "Allow: /\n"
+        f"Sitemap: {SITE_URL}sitemap.xml\n")
+    stamp = _dt.date.today().isoformat()
+    (directory / "sitemap.xml").write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"  <url>\n    <loc>{SITE_URL}</loc>\n"
+        f"    <lastmod>{stamp}</lastmod>\n"
+        "    <changefreq>weekly</changefreq>\n"
+        "  </url>\n</urlset>\n")
 
 
 dest = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else HERE / "isaac-site.html")
 if "--standalone" in sys.argv[2:]:
     out = standalone(out)
+    seo_files(dest.parent)
     # og:image must be an absolute URL, so the icon cannot stay a data URI here.
     (dest.parent / "icon.png").write_bytes((HERE / "icon256.png").read_bytes())
 dest.write_text(out)
