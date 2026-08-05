@@ -640,6 +640,15 @@ document.querySelectorAll(".tab").forEach((tab) => {
 $("panel-toggle").addEventListener("click", () => send({ type: "togglePanel" }));
 $("play").addEventListener("click", () => send({ type: "launchGame" }));
 
+// Re-rendering from the state we already hold, rather than asking Swift for it: the
+// last run IS what the model still has, and a round trip would only add a flicker.
+function setShowingLastRun(on) {
+  showingLastRun = on;
+  if (lastState) window.onState(lastState);
+}
+$("show-last")?.addEventListener("click", () => setShowingLastRun(true));
+$("hide-last")?.addEventListener("click", () => setShowingLastRun(false));
+
 // Ask for a view's data the first time it is opened, and refresh unlocks each time —
 // the game rewrites the save the moment you unlock something.
 document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
@@ -863,6 +872,10 @@ let lastStats = {};
 // stat cards -- tear delay is computed but never drawn, so it is absent from there. A
 // comparison table must read the data, not what the UI happened to paint.
 let lastState = null;
+/// Set by "View last run": with no game running the page is blank, and this is the
+/// user asking for the previous run back. Cleared the moment a game appears, so a
+/// finished run can never be mistaken for the one now starting.
+let showingLastRun = false;
 let firstRender = true;
 let lastSeed = null;
 
@@ -1349,6 +1362,22 @@ window.onState = (state) => {
   // Every character has non-zero base stats, so rendering them with no run in
   // progress prints a plausible-looking readout of nothing. Only claim a character
   // once the log has actually named one.
+  // With no game running, nothing on this page is live. Showing the last run's stats
+  // anyway means a readout that looks current and is not, so the page goes blank and
+  // the old run is offered as an explicit choice instead.
+  const idle = !state.gameRunning;
+  if (!idle) showingLastRun = false;   // a real run always wins
+  const blank = idle && !showingLastRun;
+  const runPage = $("run");
+  if (runPage) runPage.dataset.idle = blank ? "on" : "off";
+  const idleBox = $("run-idle");
+  if (idleBox) idleBox.hidden = !blank;
+  // Only offer it when there is one. A dead button is worse than no button.
+  const showLast = $("show-last");
+  if (showLast) showLast.hidden = !state.hasRun;
+  const lastNote = $("last-run-note");
+  if (lastNote) lastNote.hidden = !(idle && showingLastRun);
+
   const liveRun = state.gameRunning && state.hasRun;
   $("character").textContent = liveRun ? (state.character || "\u2014")
     : state.gameRunning ? "Waiting for a run"
@@ -2594,7 +2623,7 @@ const SETTINGS = [
         opts: [["1", "1"], ["2", "2"], ["3", "3"]],
         desc: "How precisely the stat numbers read.",
         apply: (v) => { window.STAT_DECIMALS = parseInt(v, 10) || 2;
-          if (typeof lastStateJSON === "object" && lastStateJSON) window.onState(lastStateJSON); } },
+          if (lastState) window.onState(lastState); } },
 
       { id: "showBreakdown", type: "switch", label: "Base + change under each stat", def: true,
         desc: "Shows what your character started with and what the items added.",

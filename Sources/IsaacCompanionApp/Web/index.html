@@ -54,15 +54,34 @@
     <button class="tab" data-tab="bestiary">Enemies</button>
     <button class="tab" data-tab="history">History</button>
     <button class="tab" data-tab="overlay">Overlay</button>
-    <button class="tab" data-tab="settings">Settings</button>
     <button class="tab" data-tab="unlocks">Unlocks</button>
     <button class="spacer"></button>
     <button id="play" class="ghost play" title="Launch the game through Steam">Play</button>
     <button id="theme-toggle" class="ghost" title="Switch between Devil and Angel"><span class="glyph">⛧</span><span id="theme-name">Devil</span></button>
     <button id="panel-toggle" class="ghost" title="Toggle the always-on-top panel">Floating panel</button>
+    <!-- Last in the bar, so it sits at the far right with the other controls that act
+         on the app rather than navigating it. Collapsed to its gear until hovered. -->
+    <button class="tab gearbtn" data-tab="settings" aria-label="Settings" title="Settings">
+      <span class="gearic" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <circle cx="12" cy="12" r="3.2"/>
+          <g class="teeth">
+            <line x1="18.2" y1="12" x2="21.2" y2="12"/>
+            <line x1="16.38" y1="7.62" x2="18.51" y2="5.49"/>
+            <line x1="12" y1="5.8" x2="12" y2="2.8"/>
+            <line x1="7.62" y1="7.62" x2="5.49" y2="5.49"/>
+            <line x1="5.8" y1="12" x2="2.8" y2="12"/>
+            <line x1="7.62" y1="16.38" x2="5.49" y2="18.51"/>
+            <line x1="12" y1="18.2" x2="12" y2="21.2"/>
+            <line x1="16.38" y1="16.38" x2="18.51" y2="18.51"/>
+          </g>
+        </svg>
+      </span>
+      <span class="gearlabel">Settings</span>
+    </button>
   </nav>
 
-  <section id="run" class="page active">
+  <section id="run" class="page active" data-idle="on">
     <header class="runbar">
       <div>
         <h1 id="character">—</h1>
@@ -74,6 +93,23 @@
         <span id="roomtag" class="badge hidden"></span>
       </div>
     </header>
+
+    <!-- With no game running there is nothing live to report, and the previous run's
+         numbers sitting on screen read as current ones. So the page goes blank and
+         offers the old run explicitly, rather than showing it and hoping you notice
+         the tense. Visible from the first paint, and hidden the moment state says a
+         game is running -- the other way round shows an empty page for however long
+         Swift takes to answer. -->
+    <div id="run-idle">
+      <p class="idle-lead">Nothing to track yet.</p>
+      <p class="muted small">Start Isaac and this fills in as you play &#8212; no setup,
+        no mod, nothing to enable.</p>
+      <button id="show-last" class="ghost" hidden>View last run</button>
+    </div>
+    <p id="last-run-note" class="lastnote" hidden>
+      <span>This is your <b>last</b> run, not a live one.</span>
+      <button id="hide-last" class="chip">Hide it</button>
+    </p>
 
     <p id="launch-error" class="warn hidden"></p>
     <div id="stats" class="stats"></div>

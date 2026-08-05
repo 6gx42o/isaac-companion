@@ -258,6 +258,10 @@ body::after {
   letter-spacing: .16em;
   text-transform: uppercase;
   cursor: pointer;
+  /* Without this a flex item's min-content is its longest WORD, so the row solves an
+     overflow by wrapping "Floating panel" onto two lines and growing the whole bar.
+     The gear expanding on hover was enough to trigger exactly that. */
+  white-space: nowrap;
   transition: color var(--t) var(--ease), border-color var(--t) var(--ease),
               background-color var(--t) var(--ease), transform var(--t-fast) var(--ease);
 }
@@ -3405,3 +3409,86 @@ kbd {
 :root[data-blind="off"] .mk-blind { display: none; }
 :root[data-rerolls="off"] .mk-reroll { display: none; }
 :root[data-itemids="off"] .mk-id { display: none; }
+
+/* ---- the settings gear ------------------------------------------------------
+   Collapsed to its icon so the far-right cluster stays quiet, and it names itself
+   on hover rather than relying on a tooltip nobody waits for. The label grows out
+   from behind the gear, which is why the gear itself does not move. */
+.gearbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.gearic {
+  width: 15px; height: 15px;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none;
+  transition: transform .55s var(--ease);
+}
+.gearic svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.gearic circle { fill: none; stroke: currentColor; stroke-width: 2.1; }
+.gearic .teeth line { stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; }
+
+/* One slow half-turn. A gear that spins forever reads as a loading spinner. */
+.gearbtn:hover .gearic,
+.gearbtn:focus-visible .gearic { transform: rotate(180deg); }
+.gearbtn.active .gearic { transform: rotate(180deg); }
+
+.gearlabel {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  margin-left: 0;
+  transition: max-width .4s var(--ease), opacity .28s var(--ease),
+              margin-left .4s var(--ease);
+}
+.gearbtn:hover .gearlabel,
+.gearbtn:focus-visible .gearlabel,
+.gearbtn.active .gearlabel {
+  max-width: 90px;
+  opacity: 1;
+  margin-left: 8px;
+}
+
+/* ---- nothing to show yet ----------------------------------------------------
+   Everything in the run page except its header and this block. Hiding by rule
+   rather than by wrapping the body in a div keeps the markup flat, and means a
+   section added later is covered without anyone remembering to move it. */
+#run[data-idle="on"] > *:not(.runbar):not(#run-idle) { display: none; }
+#run[data-idle="on"] .runbar .sub,
+#run[data-idle="on"] .runbar h1 { visibility: hidden; }
+
+#run-idle {
+  padding: 46px 0 40px;
+  max-width: 46ch;
+}
+.idle-lead {
+  font-size: 15px;
+  color: var(--dim);
+  margin: 0 0 6px;
+}
+#run-idle .muted { margin: 0 0 18px; }
+
+.lastnote {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 18px;
+  padding: 7px 11px;
+  border-left: 2px solid var(--warn);
+  background: var(--panel);
+  color: var(--dim);
+  font-size: 12px;
+}
+.lastnote b { color: var(--warn); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gearic, .gearlabel { transition: none; }
+}
+
+/* An author `display` beats the UA stylesheet's [hidden], which is how an element
+   carrying the hidden attribute still shows up -- the "last run" note did exactly
+   that, because .lastnote sets display:flex. Stated once here rather than being
+   rediscovered per element. */
+[hidden] { display: none !important; }
